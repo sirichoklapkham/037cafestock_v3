@@ -264,7 +264,7 @@
                     <div class="flex flex-col sm:flex-row items-center gap-2">
                         <div class="relative w-full">
                             <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3.5 text-slate-400 text-xs"></i>
-                            <input type="text" id="inventory-search" placeholder="ค้นหารหัส หรือชื่อสินค้า..." class="w-full pl-9 pr-4 py-2.5 text-xs md:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#C1E1C1] focus:bg-white transition">
+                            <input type="text" id="inventory-search" placeholder="ค้นหารหัส หรือชื่อสินค้า (ค้นหาง่ายขึ้น กรอกไม่ครบก็เจอ)..." class="w-full pl-9 pr-4 py-2.5 text-xs md:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#C1E1C1] focus:bg-white transition">
                         </div>
                         <button onclick="sendLowStockToLine()" class="owner-col hidden w-full sm:w-auto px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 shadow-sm transition flex-shrink-0">
                             <i class="fa-brands fa-line text-sm"></i>
@@ -634,6 +634,16 @@
         let adjustLogs = [];
         let autoSyncTimer = null;
 
+        // ฟังก์ชันแปลงข้อความภาษาไทยเพื่อลบสระและวรรณยุกต์ออก ทำให้ค้นหาคำแบบย่อหรือพิมพ์ไม่ครบก็เจอ
+        function normalizeText(str) {
+            if (!str) return '';
+            return String(str)
+                .toLowerCase()
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/[่้๊๋็์ํ๎]/g, '') // ลบวรรณยุกต์ไทย
+                .replace(/\s+/g, '');      // ตัดช่องว่างออก
+        }
+
         async function sendLowStockToLine() {
             if (!googleScriptUrl) return alert('กรุณาตั้งค่า Google Script URL ก่อนทำรายการ');
 
@@ -690,7 +700,6 @@
             try {
                 if (showToastAlert) showToast('กำลังซิงค์ข้อมูลจาก Google Sheets...');
                 
-                // แนบ Timestamp เพื่อป้องกัน Browser Cache เพื่อให้ได้ข้อมูลเสถียร 100%
                 const fetchUrl = googleScriptUrl + (googleScriptUrl.includes('?') ? '&' : '?') + '_t=' + Date.now();
                 const res = await fetch(fetchUrl);
                 const resData = await res.json();
@@ -745,7 +754,6 @@
 
         function startAutoSync() {
             if (autoSyncTimer) clearInterval(autoSyncTimer);
-            // โหมดพนักงาน: Auto Sync ทุก 10 วินาที
             autoSyncTimer = setInterval(() => {
                 fetchDataFromGoogleSheet(false);
             }, 10000);
@@ -793,7 +801,6 @@
                     body: JSON.stringify(sheetPayload)
                 });
                 console.log('บันทึกและส่งการแจ้งเตือนไปยัง LINE เรียบร้อยแล้ว');
-                // หลังอัปเดต ให้ดึงข้อมูลสดกลับมาทันที
                 setTimeout(() => fetchDataFromGoogleSheet(false), 1200);
             } catch (err) {
                 console.error('Error syncing to Google Sheets/LINE:', err);
@@ -833,14 +840,13 @@
             const roleBadge = document.getElementById('role-badge');
             
             const navDashboard = document.getElementById('nav-dashboard');
-            const navPurchase = document.getElementById('nav-[#2D5A2D]');
             const navCategories = document.getElementById('nav-categories');
             const navTestLine = document.getElementById('nav-test-line');
             const ownerAddBtn = document.getElementById('owner-add-item-btn');
             const staffBanner = document.getElementById('staff-notice-banner');
 
             if (role === 'OWNER') {
-                stopAutoSync(); // เจ้าของร้านไม่เปิด Auto-sync เพื่อไม่ให้ขัดจังหวะการคีย์งาน
+                stopAutoSync();
                 btnOwner.className = 'flex-1 sm:flex-none px-3 py-1.5 rounded-lg transition-all flex items-center justify-center gap-1.5 bg-white text-emerald-800 shadow-sm font-semibold';
                 btnStaff.className = 'flex-1 sm:flex-none px-3 py-1.5 rounded-lg transition-all flex items-center justify-center gap-1.5 text-slate-500 hover:text-slate-800';
                 roleBadge.className = 'hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-[#E8F5E8] text-[#2D5A2D]';
@@ -856,7 +862,7 @@
                 switchTab('dashboard');
                 showToast('เข้าสู่โหมด เจ้าของร้าน (Owner)');
             } else {
-                startAutoSync(); // โหมดพนักงานเปิด Real-time Auto-sync
+                startAutoSync();
                 btnStaff.className = 'flex-1 sm:flex-none px-3 py-1.5 rounded-lg transition-all flex items-center justify-center gap-1.5 bg-white text-rose-800 shadow-sm font-semibold';
                 btnOwner.className = 'flex-1 sm:flex-none px-3 py-1.5 rounded-lg transition-all flex items-center justify-center gap-1.5 text-slate-500 hover:text-slate-800';
                 roleBadge.className = 'hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-[#FDF0F0] text-rose-800';
@@ -986,7 +992,8 @@
         }
 
         function renderInventoryTable() {
-            const searchVal = document.getElementById('inventory-search').value.toLowerCase();
+            const rawSearchVal = document.getElementById('inventory-search').value;
+            const searchVal = normalizeText(rawSearchVal);
             const catVal = document.getElementById('inventory-cat-filter').value;
             const statusVal = document.getElementById('inventory-status-filter').value;
 
@@ -995,7 +1002,11 @@
             });
 
             const filtered = items.filter(item => {
-                const matchSearch = item.name.toLowerCase().includes(searchVal) || item.code.toLowerCase().includes(searchVal);
+                const normName = normalizeText(item.name);
+                const normCode = normalizeText(item.code);
+                
+                // ระบบค้นหาอัจฉริยะ: ค้นหาคำที่คล้ายกัน หรือพิมพ์ไม่ครบตัวอักษรก็ค้นพบ
+                const matchSearch = !searchVal || normName.includes(searchVal) || normCode.includes(searchVal);
                 const matchCat = (catVal === 'ALL') || (item.categoryId == catVal);
                 
                 let matchStatus = true;
@@ -1125,8 +1136,15 @@
             const catFilter = document.getElementById('inventory-cat-filter');
             const itemCatForm = document.getElementById('item-form-category');
 
+            // รักษาค่าการเลือกหมวดหมู่เดิมไว้ ไม่ให้รีเซ็ทกลับไปเป็น ALL ขณะซิงค์ข้อมูลอัตโนมัติ
+            const currentCatVal = catFilter ? catFilter.value : 'ALL';
+
             catFilter.innerHTML = '<option value="ALL">หมวดหมู่ทั้งหมด</option>' + categories.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
             itemCatForm.innerHTML = '<option value="">-- เลือกหมวดหมู่ --</option>' + categories.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+
+            if (currentCatVal && catFilter.querySelector(`option[value="${currentCatVal}"]`)) {
+                catFilter.value = currentCatVal;
+            }
         }
 
         function openItemModal(itemId = null) {
@@ -1260,7 +1278,7 @@
 
             syncItemToGoogleSheet('markOrdered', {
                 code: item.code,
-                name: item.name, // แนบชื่อสินค้าเพื่อ LINE Notify ที่ถูกต้อง
+                name: item.name,
                 orderedQty: qty,
                 orderedNote: note
             });
@@ -1334,10 +1352,9 @@
             renderAllViews();
             showToast('ปรับปรุงสต๊อกและแจ้งเตือนเข้า LINE เรียบร้อย');
 
-            // ส่งชื่อสินค้าที่ถูกต้องไปยัง LINE
             syncItemToGoogleSheet('quickAdjust', {
                 code: item.code,
-                name: item.name, // ส่งชื่อตรงกับที่เลือก
+                name: item.name,
                 type: selectedAdjustType,
                 qty: qty,
                 reason: reason
@@ -1452,7 +1469,7 @@
 
             syncItemToGoogleSheet('purchase', {
                 code: item.code,
-                name: item.name, // ส่งชื่อตรง
+                name: item.name,
                 qty: qty,
                 unitCost: unitCost,
                 supplier: supplier
@@ -1463,12 +1480,15 @@
             const tbody = document.getElementById('purchase-history-tbody');
             if (!tbody) return;
 
-            const searchVal = document.getElementById('purchase-search')?.value.toLowerCase() || '';
+            const rawSearchVal = document.getElementById('purchase-search')?.value || '';
+            const searchVal = normalizeText(rawSearchVal);
 
             const filteredPurchases = purchases.filter(p => {
-                return (p.itemName && p.itemName.toLowerCase().includes(searchVal)) ||
-                       (p.itemCode && p.itemCode.toLowerCase().includes(searchVal)) ||
-                       (p.supplier && p.supplier.toLowerCase().includes(searchVal));
+                const normName = normalizeText(p.itemName);
+                const normCode = normalizeText(p.itemCode);
+                const normSupplier = normalizeText(p.supplier);
+
+                return !searchVal || normName.includes(searchVal) || normCode.includes(searchVal) || normSupplier.includes(searchVal);
             });
 
             if (filteredPurchases.length === 0) {
