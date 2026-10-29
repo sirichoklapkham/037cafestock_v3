@@ -663,7 +663,7 @@
 
     <!-- Application Logic -->
     <script>
-        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxmuap44wjA1u5taO7CHUUNorlFk8t9tV_caB2yDe1DuuuU90tMUfHyAsJCdY9_ipp1-w/exec';
+        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzKdl_I7ZRTo-2DjerEsip77poFt9ZG202AJOY3RKuB7AAv6xkhalAYtIVxRPaksBl-Xg/exec';
         let googleScriptUrl = DEFAULT_SCRIPT_URL;
 
         const OWNER_PASSWORD = '037cafe';
@@ -687,6 +687,27 @@
                 .replace(/[\u0300-\u036f]/g, '')
                 .replace(/[่้๊๋็์ํ๎]/g, '')
                 .replace(/\s+/g, '');
+        }
+
+        // แปลงรูปแบบวันที่ทุกรูปแบบให้เป็น YYYY-MM-DD เพื่อใช้อ้างอิงในปฏิทิน
+        function parseToStandardDateStr(dateInput) {
+            if (!dateInput) return '';
+            if (dateInput instanceof Date) {
+                const y = dateInput.getFullYear();
+                const m = String(dateInput.getMonth() + 1).padStart(2, '0');
+                const d = String(dateInput.getDate()).padStart(2, '0');
+                return `${y}-${m}-${d}`;
+            }
+            let str = String(dateInput).trim();
+            if (str.includes('T')) str = str.split('T')[0];
+            if (str.includes('/')) {
+                const parts = str.split('/');
+                if (parts.length === 3) {
+                    if (parts[0].length === 4) return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+                    return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                }
+            }
+            return str;
         }
 
         async function sendLowStockToLine() {
@@ -753,9 +774,12 @@
                     categories = resData.categories;
                 }
 
-                // ดึงข้อมูลประวัติ PurchaseHistory จากชีทเข้าตัวแปร purchases และบันทึก localStorage[cite: 24]
+                // ดึงและแปลงข้อมูล PurchaseHistory
                 if (resData.purchases && Array.isArray(resData.purchases)) {
-                    purchases = resData.purchases;
+                    purchases = resData.purchases.map(p => ({
+                        ...p,
+                        date: parseToStandardDateStr(p.date)
+                    }));
                 }
 
                 const rawItems = Array.isArray(resData) ? resData : (resData.items || []);
@@ -1369,7 +1393,7 @@
             const item = items.find(i => Number(i.id) === Number(selectedAdjustItemId));
             if (!item) return;
 
-            const todayDateStr = getFormattedDate(); // วันที่ปัจจุบันรูปแบบ YYYY-MM-DD[cite: 24]
+            const todayDateStr = getFormattedDate();
 
             if (selectedAdjustType === 'ADD') {
                 item.stock += qty;
@@ -1379,7 +1403,6 @@
                     item.orderedNote = '';
                 }
 
-                // บันทึกออบเจกต์การซื้อเติมสต๊อกลงใน Purchases เพื่ออัปเดตปฏิทินทันที[cite: 24]
                 const unitCost = Number(item.lastCost || 0);
                 const totalCost = qty * unitCost;
 
@@ -1416,14 +1439,12 @@
             closeAdjustModal();
             renderAllViews();
 
-            // แสดงรายการลงของประจำวันใต้มุมมองปฏิทินทันที[cite: 24]
             if (selectedAdjustType === 'ADD') {
                 showDayDetails(todayDateStr);
             }
 
             showToast(selectedAdjustType === 'ADD' ? 'เติมสต๊อกและบันทึกลงปฏิทินเรียบร้อย' : 'ปรับปรุงสต๊อกเรียบร้อย');
 
-            // ส่งข้อมูลไปยัง Google Sheets (ทั้งแผ่นงานหลัก และแผ่นงาน PurchaseHistory)[cite: 24]
             syncItemToGoogleSheet('quickAdjust', {
                 date: todayDateStr,
                 code: item.code,
@@ -1606,20 +1627,23 @@
             const firstDay = new Date(year, month, 1).getDay();
             const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-            // รวมยอดเงินสั่งซื้อแยกตามวันที่ในเดือนนั้นๆ
+            // คำนวณยอดลงของรายวันจากข้อมูล purchases โดยแมปวันที่ YYYY-MM-DD
             const dailyTotals = {};
             purchases.forEach(p => {
                 if (p.date) {
-                    const [pYear, pMonth, pDay] = p.date.split('-').map(Number);
-                    if (pYear === year && pMonth === month + 1) {
-                        dailyTotals[pDay] = (dailyTotals[pDay] || 0) + Number(p.total || 0);
+                    const cleanDateStr = parseToStandardDateStr(p.date);
+                    const parts = cleanDateStr.split('-').map(Number);
+                    if (parts.length === 3) {
+                        const [pYear, pMonth, pDay] = parts;
+                        if (pYear === year && pMonth === month + 1) {
+                            dailyTotals[pDay] = (dailyTotals[pDay] || 0) + Number(p.total || 0);
+                        }
                     }
                 }
             });
 
             let html = '';
 
-            // ช่องว่างของวันก่อนเริ่มวันที่ 1
             for (let i = 0; i < firstDay; i++) {
                 html += `<div class="p-2 min-h-[60px] md:min-h-[75px] bg-slate-50/40 rounded-xl border border-transparent"></div>`;
             }
@@ -1630,7 +1654,6 @@
             for (let d = 1; d <= daysInMonth; d++) {
                 const total = dailyTotals[d] || 0;
                 const isToday = isCurrentMonth && today.getDate() === d;
-
                 const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 
                 html += `
@@ -1657,7 +1680,7 @@
             const totalDisplay = document.getElementById('detail-total-amount');
             const itemsList = document.getElementById('detail-items-list');
 
-            const dayPurchases = purchases.filter(p => p.date === dateStr);
+            const dayPurchases = purchases.filter(p => parseToStandardDateStr(p.date) === dateStr);
             const totalSum = dayPurchases.reduce((sum, p) => sum + Number(p.total || 0), 0);
 
             dateTitle.innerText = dateStr;
