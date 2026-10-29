@@ -15,8 +15,6 @@
     <link rel="apple-touch-icon-precomposed" href="https://drive.google.com/thumbnail?id=1UTeeGot9RJL-NB4NjdgK35m7UeQIL-fe&sz=w512">
     <link rel="icon" type="image/png" href="https://drive.google.com/thumbnail?id=1UTeeGot9RJL-NB4NjdgK35m7UeQIL-fe&sz=w512">
 
-    <link rel="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIjAzN0NhZmUgJiBTdHVkaW8gU3RvY2siLAogICJzaG9ydF9uYW1lIjogIjAzN0NhZmUgU3RvY2siLAogICJzdGFydF91cmwiOiAiLiIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiI0ZBRjhGNSIsCiAgInRoZW1lX2NvbG9yIjogIiNGQUY4RjUiLAogICJpY29ucyI6IFsKICAgIHsKICAgICAgInNyYyI6ICJodHRwczovL2RyaXZlLmdvb2dsZS5jb20vdGh1bWJuYWlsP2lkPTFVVGVlR290OVJKTC1OQjROamRnSzM1bTdVZVFJTC1mZSZzej13NTEyIiwKICAgICAgInNpemVzIjogIjUxMng1MTIiLAogICAgICAidHlwZSI6ICJpbWFnZS9wbmciLAogICAgICAicHVycG9zZSI6ICJhbnkgbWFza2FibGUiCiAgICB9CiAgXQp9">
-
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -81,7 +79,7 @@
                 <img src="https://drive.google.com/thumbnail?id=1UTeeGot9RJL-NB4NjdgK35m7UeQIL-fe&sz=w512" alt="Logo" class="w-9 h-9 rounded-xl object-cover shadow-sm border border-slate-100">
                 <div>
                     <h1 class="font-bold text-base md:text-lg leading-tight text-slate-800">037Cafe & Studio</h1>
-                    <p class="text-[11px] text-slate-400 font-medium">Stock Management v1.6</p>
+                    <p class="text-[11px] text-slate-400 font-medium">Stock Management v1.8</p>
                 </div>
             </div>
             
@@ -104,6 +102,11 @@
             <button onclick="switchTab('purchase')" id="nav-purchase" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 text-slate-600 hover:bg-slate-50">
                 <i class="fa-solid fa-cart-shopping text-base"></i>
                 <span>บันทึกการซื้อสินค้าเข้า</span>
+            </button>
+
+            <button onclick="switchTab('calendar')" id="nav-calendar" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 text-slate-600 hover:bg-slate-50">
+                <i class="fa-solid fa-calendar-days text-base text-amber-500"></i>
+                <span>ปฏิทินยอดลงของประจำวัน</span>
             </button>
 
             <button onclick="switchTab('adjust-logs')" id="nav-adjust-logs" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 text-slate-600 hover:bg-slate-50">
@@ -346,11 +349,11 @@
 
                             <div class="grid grid-cols-2 gap-2">
                                 <div>
-                                    <label class="block text-slate-600 font-medium mb-1">ราคา/หน่วย (฿)</label>
+                                    <label class="block text-slate-600 font-medium mb-1">ราคาต้นทุน/หน่วย (฿)</label>
                                     <input type="number" id="purchase-unit-cost" step="0.01" min="0" required oninput="calculatePurchaseTotal()" placeholder="0.00" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#C1E1C1] outline-none">
                                 </div>
                                 <div>
-                                    <label class="block text-slate-600 font-medium mb-1">จำนวน <span id="purchase-unit-label" class="text-slate-400"></span></label>
+                                    <label class="block text-slate-600 font-medium mb-1">จำนวนที่สั่งซื้อ <span id="purchase-unit-label" class="text-slate-400"></span></label>
                                     <input type="number" id="purchase-qty" step="0.01" min="0.01" required oninput="calculatePurchaseTotal()" placeholder="0" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#C1E1C1] outline-none">
                                 </div>
                             </div>
@@ -367,7 +370,7 @@
 
                             <button type="submit" class="w-full py-3 pastel-gradient-btn font-semibold rounded-xl transition shadow-sm flex justify-center items-center gap-2">
                                 <i class="fa-solid fa-check"></i>
-                                บันทึกการสั่งซื้อ
+                                บันทึกการสั่งซื้อ & อัปเดตชีท
                             </button>
                         </form>
                     </div>
@@ -400,6 +403,47 @@
                             </table>
                         </div>
                     </div>
+                </div>
+            </section>
+
+            <!-- CALENDAR TAB (ตารางปฏิทินแสดงยอดลงของประจำวัน) -->
+            <section id="tab-calendar" class="tab-content hidden space-y-5">
+                <div class="bg-white p-4 md:p-5 rounded-2xl border border-slate-100 shadow-sm space-y-4">
+                    <div class="flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                        <div class="flex items-center space-x-2">
+                            <i class="fa-solid fa-calendar-days text-amber-500 text-lg"></i>
+                            <h3 id="calendar-month-year" class="font-bold text-slate-800 text-base md:text-lg">ปฏิทินยอดลงของประจำวัน</h3>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="changeCalendarMonth(-1)" class="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-600 transition"><i class="fa-solid fa-chevron-left"></i></button>
+                            <button onclick="resetCalendarToCurrent()" class="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-semibold rounded-xl transition">เดือนปัจจุบัน</button>
+                            <button onclick="changeCalendarMonth(1)" class="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-600 transition"><i class="fa-solid fa-chevron-right"></i></button>
+                        </div>
+                    </div>
+
+                    <!-- ตารางปฏิทิน -->
+                    <div class="grid grid-cols-7 gap-1 md:gap-2 text-center text-xs font-semibold text-slate-400 mb-1">
+                        <div class="text-rose-500 py-1">อา.</div>
+                        <div class="py-1">จ.</div>
+                        <div class="py-1">อ.</div>
+                        <div class="py-1">พ.</div>
+                        <div class="py-1">พฤ.</div>
+                        <div class="py-1">ศ.</div>
+                        <div class="text-amber-600 py-1">ส.</div>
+                    </div>
+                    <div id="calendar-grid" class="grid grid-cols-7 gap-1 md:gap-2 text-xs"></div>
+                </div>
+
+                <!-- แสดงรายละเอียดสินค้าที่ลงของในวันที่เลือก -->
+                <div id="selected-day-details" class="bg-white p-4 md:p-5 rounded-2xl border border-slate-100 shadow-sm hidden space-y-3">
+                    <div class="flex justify-between items-center border-b border-slate-100 pb-2">
+                        <h4 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+                            <i class="fa-solid fa-box-open text-amber-500"></i>
+                            รายละเอียดการลงของวันที่ <span id="detail-date-title" class="text-amber-600"></span>
+                        </h4>
+                        <span id="detail-total-amount" class="font-bold text-emerald-700 text-sm md:text-base">ยอดรวม: ฿0.00</span>
+                    </div>
+                    <div id="detail-items-list" class="space-y-2"></div>
                 </div>
             </section>
 
@@ -619,7 +663,7 @@
 
     <!-- Application Logic -->
     <script>
-        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyS-p1aqFgkoU_vUWSVlhB4IW7-NlkAkNtl6-mgzfGtjwjjox18dY5akoXVT3jGDSKV1A/exec';
+        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxYzGcYmMvFbid3jk5ct4fHBwx1AbpjSESq-AC4QNfBc8Bx8tHqzryAHzfzPNPNnXn3tQ/exec';
         let googleScriptUrl = DEFAULT_SCRIPT_URL;
 
         const OWNER_PASSWORD = '037cafe';
@@ -634,14 +678,15 @@
         let adjustLogs = [];
         let autoSyncTimer = null;
 
-        // ฟังก์ชันแปลงข้อความภาษาไทยเพื่อลบสระและวรรณยุกต์ออก ทำให้ค้นหาคำแบบย่อหรือพิมพ์ไม่ครบก็เจอ
+        let calendarCurrentDate = new Date();
+
         function normalizeText(str) {
             if (!str) return '';
             return String(str)
                 .toLowerCase()
                 .replace(/[\u0300-\u036f]/g, '')
-                .replace(/[่้๊๋็์ํ๎]/g, '') // ลบวรรณยุกต์ไทย
-                .replace(/\s+/g, '');      // ตัดช่องว่างออก
+                .replace(/[่้๊๋็์ํ๎]/g, '')
+                .replace(/\s+/g, '');
         }
 
         async function sendLowStockToLine() {
@@ -706,6 +751,10 @@
 
                 if (resData.categories && Array.isArray(resData.categories) && resData.categories.length > 0) {
                     categories = resData.categories;
+                }
+
+                if (resData.purchases && Array.isArray(resData.purchases)) {
+                    purchases = resData.purchases;
                 }
 
                 const rawItems = Array.isArray(resData) ? resData : (resData.items || []);
@@ -800,7 +849,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(sheetPayload)
                 });
-                console.log('บันทึกและส่งการแจ้งเตือนไปยัง LINE เรียบร้อยแล้ว');
+                console.log('บันทึกและส่งข้อมูลไปยัง Google Sheets เรียบร้อยแล้ว');
                 setTimeout(() => fetchDataFromGoogleSheet(false), 1200);
             } catch (err) {
                 console.error('Error syncing to Google Sheets/LINE:', err);
@@ -883,8 +932,8 @@
         }
 
         function switchTab(tabId, statusFilter = null) {
-            if (currentRole === 'STAFF' && tabId !== 'inventory' && tabId !== 'adjust-logs') {
-                showToast('พนักงานใช้ได้เฉพาะระบบสต๊อกสินค้าและประวัติปรับปรุง');
+            if (currentRole === 'STAFF' && tabId !== 'inventory' && tabId !== 'adjust-logs' && tabId !== 'calendar') {
+                showToast('พนักงานใช้ได้เฉพาะระบบสต๊อกสินค้า ปฏิทิน และประวัติปรับปรุง');
                 tabId = 'inventory';
             }
 
@@ -908,9 +957,8 @@
                 renderInventoryTable();
             }
 
-            if (tabId === 'adjust-logs') {
-                renderAdjustLogs();
-            }
+            if (tabId === 'adjust-logs') renderAdjustLogs();
+            if (tabId === 'calendar') renderCalendarView();
         }
 
         function renderDashboard() {
@@ -1005,7 +1053,6 @@
                 const normName = normalizeText(item.name);
                 const normCode = normalizeText(item.code);
                 
-                // ระบบค้นหาอัจฉริยะ: ค้นหาคำที่คล้ายกัน หรือพิมพ์ไม่ครบตัวอักษรก็ค้นพบ
                 const matchSearch = !searchVal || normName.includes(searchVal) || normCode.includes(searchVal);
                 const matchCat = (catVal === 'ALL') || (item.categoryId == catVal);
                 
@@ -1135,8 +1182,6 @@
         function populateCategoryDropdowns() {
             const catFilter = document.getElementById('inventory-cat-filter');
             const itemCatForm = document.getElementById('item-form-category');
-
-            // รักษาค่าการเลือกหมวดหมู่เดิมไว้ ไม่ให้รีเซ็ทกลับไปเป็น ALL ขณะซิงค์ข้อมูลอัตโนมัติ
             const currentCatVal = catFilter ? catFilter.value : 'ALL';
 
             catFilter.innerHTML = '<option value="ALL">หมวดหมู่ทั้งหมด</option>' + categories.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
@@ -1350,7 +1395,7 @@
             saveToLocalStorage();
             closeAdjustModal();
             renderAllViews();
-            showToast('ปรับปรุงสต๊อกและแจ้งเตือนเข้า LINE เรียบร้อย');
+            showToast('ปรับปรุงสต๊อกเรียบร้อย');
 
             syncItemToGoogleSheet('quickAdjust', {
                 code: item.code,
@@ -1465,9 +1510,10 @@
             document.getElementById('purchase-total-display').innerText = '฿0.00';
             document.getElementById('purchase-unit-label').innerText = '';
 
-            showToast('บันทึกการสั่งซื้อเรียบร้อย');
+            showToast('บันทึกการสั่งซื้อลง Google Sheet เรียบร้อยแล้ว');
 
             syncItemToGoogleSheet('purchase', {
+                date: date,
                 code: item.code,
                 name: item.name,
                 qty: qty,
@@ -1498,20 +1544,119 @@
 
             tbody.innerHTML = filteredPurchases.map(p => `
                 <tr class="hover:bg-slate-50 transition">
-                    <td class="py-2.5 px-3 text-slate-500">${escapeHtml(p.date)}</td>
+                    <td class="py-2.5 px-3 text-slate-500 font-mono">${escapeHtml(p.date)}</td>
                     <td class="py-2.5 px-3 font-medium text-slate-800">${escapeHtml(p.itemName)} <span class="text-[10px] text-slate-400">(${escapeHtml(p.itemCode)})</span></td>
-                    <td class="py-2.5 px-3 text-slate-700">+${p.qty} ${escapeHtml(p.unit)}</td>
+                    <td class="py-2.5 px-3 text-slate-700">+${p.qty}</td>
                     <td class="py-2.5 px-3 text-slate-500">${escapeHtml(p.supplier || '-')}</td>
                     <td class="py-2.5 px-3 font-semibold text-emerald-700 text-right">฿${Number(p.total).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
                 </tr>
             `).join('');
         }
 
+        /* ------------------ ฟังก์ชันแสดงผลตารางปฏิทิน ------------------ */
+        function changeCalendarMonth(offset) {
+            calendarCurrentDate.setMonth(calendarCurrentDate.getMonth() + offset);
+            renderCalendarView();
+        }
+
+        function resetCalendarToCurrent() {
+            calendarCurrentDate = new Date();
+            renderCalendarView();
+        }
+
+        function renderCalendarView() {
+            const grid = document.getElementById('calendar-grid');
+            const title = document.getElementById('calendar-month-year');
+            if (!grid) return;
+
+            const year = calendarCurrentDate.getFullYear();
+            const month = calendarCurrentDate.getMonth();
+
+            const monthNamesTH = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+            title.innerText = `ปฏิทินยอดลงของ: ${monthNamesTH[month]} ${year + 543}`;
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            // รวมยอดเงินสั่งซื้อแยกตามวันที่ในเดือนนั้นๆ
+            const dailyTotals = {};
+            purchases.forEach(p => {
+                if (p.date) {
+                    const [pYear, pMonth, pDay] = p.date.split('-').map(Number);
+                    if (pYear === year && pMonth === month + 1) {
+                        dailyTotals[pDay] = (dailyTotals[pDay] || 0) + Number(p.total || 0);
+                    }
+                }
+            });
+
+            let html = '';
+
+            // ช่องว่างของวันก่อนเริ่มวันที่ 1
+            for (let i = 0; i < firstDay; i++) {
+                html += `<div class="p-2 min-h-[60px] md:min-h-[75px] bg-slate-50/40 rounded-xl border border-transparent"></div>`;
+            }
+
+            const today = new Date();
+            const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const total = dailyTotals[d] || 0;
+                const isToday = isCurrentMonth && today.getDate() === d;
+
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+
+                html += `
+                    <div onclick="showDayDetails('${dateStr}')" class="p-1.5 md:p-2 min-h-[60px] md:min-h-[75px] bg-white rounded-xl border ${isToday ? 'border-amber-400 ring-2 ring-amber-100' : 'border-slate-100'} hover:border-amber-300 transition cursor-pointer flex flex-col justify-between shadow-xs">
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold ${isToday ? 'text-amber-600' : 'text-slate-700'} text-xs">${d}</span>
+                            ${total > 0 ? '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>' : ''}
+                        </div>
+                        ${total > 0 ? `
+                            <div class="bg-emerald-50 border border-emerald-100 text-emerald-800 rounded-lg p-1 text-[10px] font-semibold text-center mt-1">
+                                ฿${total.toLocaleString('th-TH')}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }
+
+            grid.innerHTML = html;
+        }
+
+        function showDayDetails(dateStr) {
+            const container = document.getElementById('selected-day-details');
+            const dateTitle = document.getElementById('detail-date-title');
+            const totalDisplay = document.getElementById('detail-total-amount');
+            const itemsList = document.getElementById('detail-items-list');
+
+            const dayPurchases = purchases.filter(p => p.date === dateStr);
+            const totalSum = dayPurchases.reduce((sum, p) => sum + Number(p.total || 0), 0);
+
+            dateTitle.innerText = dateStr;
+            totalDisplay.innerText = `ยอดรวม: ฿${totalSum.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`;
+
+            if (dayPurchases.length === 0) {
+                itemsList.innerHTML = `<p class="text-xs text-slate-400 py-3 text-center">ไม่มีรายการลงของในวันที่นี้</p>`;
+            } else {
+                itemsList.innerHTML = dayPurchases.map(p => `
+                    <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-100 flex justify-between items-center text-xs">
+                        <div>
+                            <p class="font-bold text-slate-800">${escapeHtml(p.itemName)} <span class="text-[10px] text-slate-400 font-mono">(${escapeHtml(p.itemCode)})</span></p>
+                            <p class="text-[11px] text-slate-500">จำนวน: +${p.qty} | ต้นทุน: ฿${Number(p.unitCost).toFixed(2)} | ร้าน: ${escapeHtml(p.supplier || '-')}</p>
+                        </div>
+                        <span class="font-bold text-emerald-700 text-xs">฿${Number(p.total).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                `).join('');
+            }
+
+            container.classList.remove('hidden');
+        }
+
         function exportPurchasesCSV() {
             if (purchases.length === 0) return alert('ไม่มีข้อมูลสำหรับส่งออก');
-            let csv = 'Date,Code,Name,Qty,Unit,UnitCost,Total,Supplier\n';
+            let csv = 'Date,Code,Name,Qty,UnitCost,Total,Supplier\n';
             purchases.forEach(p => {
-                csv += `"${p.date}","${p.itemCode}","${p.itemName}",${p.qty},"${p.unit}",${p.unitCost},${p.total},"${p.supplier || ''}"\n`;
+                csv += `"${p.date}","${p.itemCode}","${p.itemName}",${p.qty},${p.unitCost},${p.total},"${p.supplier || ''}"\n`;
             });
             const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
@@ -1556,10 +1701,7 @@
                     categories[idx].name = catName;
                 }
             } else {
-                const newCat = {
-                    id: Date.now(),
-                    name: catName
-                };
+                const newCat = { id: Date.now(), name: catName };
                 categories.push(newCat);
             }
 
@@ -1571,10 +1713,7 @@
 
         function deleteCategory(catId) {
             const hasItems = items.some(i => Number(i.categoryId) === Number(catId));
-            if (hasItems) {
-                alert('ไม่สามารถลบหมวดหมู่นี้ได้ เนื่องจากมีสินค้าอยู่ในหมวดหมู่นี้');
-                return;
-            }
+            if (hasItems) return alert('ไม่สามารถลบหมวดหมู่นี้ได้ เนื่องจากมีสินค้าอยู่ในหมวดหมู่นี้');
 
             if (confirm('คุณต้องการลบหมวดหมู่นี้ใช่หรือไม่?')) {
                 categories = categories.filter(c => Number(c.id) === Number(catId));
@@ -1620,6 +1759,7 @@
             renderInventoryTable();
             renderCategoriesGrid();
             renderAdjustLogs();
+            renderCalendarView();
         }
 
         function showToast(message) {
