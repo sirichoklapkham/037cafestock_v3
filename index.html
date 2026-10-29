@@ -679,6 +679,7 @@
         let autoSyncTimer = null;
 
         let calendarCurrentDate = new Date();
+        let selectedDateStr = getFormattedDate(); // ตัวแปรเก็บวันที่ที่กำลังเลือกในปฏิทิน
 
         function normalizeText(str) {
             if (!str) return '';
@@ -689,7 +690,7 @@
                 .replace(/\s+/g, '');
         }
 
-        // แปลงรูปแบบวันที่ทุกรูปแบบให้เป็น YYYY-MM-DD เพื่อใช้อ้างอิงในปฏิทิน
+        // แปลงรูปแบบวันที่ทุกรูปแบบให้เป็น YYYY-MM-DD
         function parseToStandardDateStr(dateInput) {
             if (!dateInput) return '';
             if (dateInput instanceof Date) {
@@ -1610,7 +1611,9 @@
 
         function resetCalendarToCurrent() {
             calendarCurrentDate = new Date();
+            selectedDateStr = getFormattedDate();
             renderCalendarView();
+            showDayDetails(selectedDateStr);
         }
 
         function renderCalendarView() {
@@ -1655,9 +1658,17 @@
                 const total = dailyTotals[d] || 0;
                 const isToday = isCurrentMonth && today.getDate() === d;
                 const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const isSelected = (selectedDateStr === dateStr);
+
+                let borderClass = 'border-slate-100';
+                if (isSelected) {
+                    borderClass = 'border-amber-500 ring-2 ring-amber-200';
+                } else if (isToday) {
+                    borderClass = 'border-amber-300 bg-amber-50/30';
+                }
 
                 html += `
-                    <div onclick="showDayDetails('${dateStr}')" class="p-1.5 md:p-2 min-h-[60px] md:min-h-[75px] bg-white rounded-xl border ${isToday ? 'border-amber-400 ring-2 ring-amber-100' : 'border-slate-100'} hover:border-amber-300 transition cursor-pointer flex flex-col justify-between shadow-xs">
+                    <div onclick="showDayDetails('${dateStr}')" class="p-1.5 md:p-2 min-h-[60px] md:min-h-[75px] bg-white rounded-xl border ${borderClass} hover:border-amber-400 transition cursor-pointer flex flex-col justify-between shadow-xs">
                         <div class="flex justify-between items-center">
                             <span class="font-bold ${isToday ? 'text-amber-600' : 'text-slate-700'} text-xs">${d}</span>
                             ${total > 0 ? '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>' : ''}
@@ -1675,6 +1686,9 @@
         }
 
         function showDayDetails(dateStr) {
+            selectedDateStr = dateStr;
+            renderCalendarView(); // อัปเดตไฮไลต์ช่องวันที่เลือกบนปฏิทิน
+
             const container = document.getElementById('selected-day-details');
             const dateTitle = document.getElementById('detail-date-title');
             const totalDisplay = document.getElementById('detail-total-amount');
@@ -1811,6 +1825,9 @@
             renderCategoriesGrid();
             renderAdjustLogs();
             renderCalendarView();
+            if (selectedDateStr) {
+                showDayDetails(selectedDateStr);
+            }
         }
 
         function showToast(message) {
