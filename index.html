@@ -668,6 +668,7 @@
 
         const OWNER_PASSWORD = '037cafe';
         let currentRole = 'STAFF';
+        let activeTabId = 'inventory';
         let selectedAdjustItemId = null;
         let selectedAdjustType = 'ADD';
         let categoryChartInstance = null;
@@ -775,12 +776,29 @@
                     categories = resData.categories;
                 }
 
-                // ดึงและแปลงข้อมูล PurchaseHistory
+                // ดึงและรวมข้อมูล PurchaseHistory (Merge Local + Server เพื่อไม่ให้ข้อมูลหาย)
                 if (resData.purchases && Array.isArray(resData.purchases)) {
-                    purchases = resData.purchases.map(p => ({
+                    const serverPurchases = resData.purchases.map(p => ({
                         ...p,
                         date: parseToStandardDateStr(p.date)
                     }));
+
+                    const mergedPurchases = [...purchases];
+                    serverPurchases.forEach(sp => {
+                        const exists = mergedPurchases.some(lp => 
+                            lp.date === sp.date && 
+                            lp.itemCode === sp.itemCode && 
+                            Number(lp.qty) === Number(sp.qty) && 
+                            Number(lp.total) === Number(sp.total)
+                        );
+                        if (!exists) {
+                            mergedPurchases.push(sp);
+                        }
+                    });
+
+                    // เรียงตามวันที่ล่าสุด
+                    mergedPurchases.sort((a, b) => new Date(b.date) - new Date(a.date));
+                    purchases = mergedPurchases;
                 }
 
                 const rawItems = Array.isArray(resData) ? resData : (resData.items || []);
@@ -823,7 +841,19 @@
                 console.error('Fetch error:', err);
                 if (showToastAlert) loadLocalOrDefaultData();
             }
-            renderAllViews();
+
+            // อัปเดตเฉพาะหน้าจอตามแท็บที่ใช้งานอยู่ เพื่อป้องกันกระตุกและคงสถานะเดิมไว้
+            if (activeTabId === 'inventory') {
+                renderInventoryTable();
+            } else if (activeTabId === 'calendar') {
+                renderCalendarView();
+                if (selectedDateStr) showDayDetails(selectedDateStr);
+            } else if (activeTabId === 'dashboard') {
+                renderDashboard();
+            } else if (activeTabId === 'purchase') {
+                renderPurchaseHistory();
+            }
+
             initPurchaseForm();
         }
 
@@ -963,6 +993,8 @@
                 tabId = 'inventory';
             }
 
+            activeTabId = tabId;
+
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('.nav-btn').forEach(el => {
                 el.classList.remove('bg-[#E8F5E8]', 'text-[#2D5A2D]', 'font-semibold');
@@ -984,7 +1016,10 @@
             }
 
             if (tabId === 'adjust-logs') renderAdjustLogs();
-            if (tabId === 'calendar') renderCalendarView();
+            if (tabId === 'calendar') {
+                renderCalendarView();
+                if (selectedDateStr) showDayDetails(selectedDateStr);
+            }
         }
 
         function renderDashboard() {
@@ -1438,12 +1473,13 @@
 
             saveToLocalStorage();
             closeAdjustModal();
-            renderAllViews();
 
             if (selectedAdjustType === 'ADD') {
+                renderCalendarView();
                 showDayDetails(todayDateStr);
             }
 
+            renderInventoryTable();
             showToast(selectedAdjustType === 'ADD' ? 'เติมสต๊อกและบันทึกลงปฏิทินเรียบร้อย' : 'ปรับปรุงสต๊อกเรียบร้อย');
 
             syncItemToGoogleSheet('quickAdjust', {
@@ -1552,7 +1588,6 @@
             item.orderedNote = '';
 
             saveToLocalStorage();
-            renderAllViews();
             renderPurchaseHistory();
 
             document.getElementById('purchase-form').reset();
@@ -1687,7 +1722,6 @@
 
         function showDayDetails(dateStr) {
             selectedDateStr = parseToStandardDateStr(dateStr);
-            renderCalendarView(); // อัปเดตไฮไลต์ปฏิทินช่องที่คลิก
 
             const container = document.getElementById('selected-day-details');
             const dateTitle = document.getElementById('detail-date-title');
@@ -1800,18 +1834,14 @@
             grid.innerHTML = categories.map(cat => {
                 const itemCount = items.filter(i => Number(i.categoryId) === Number(cat.id)).length;
                 return `
-                    <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
+                    <div class="bg-[#FAF8F5] p-3 rounded-xl border border-slate-100 flex justify-between items-center text-xs">
                         <div>
-                            <h4 class="font-bold text-slate-800 text-sm">${escapeHtml(cat.name)}</h4>
-                            <p class="text-xs text-slate-400 font-medium mt-0.5">${itemCount} รายการ</p>
+                            <p class="font-bold text-slate-800">${escapeHtml(cat.name)}</p>
+                            <p class="text-[11px] text-slate-400">${itemCount} รายการ</p>
                         </div>
-                        <div class="flex items-center gap-1">
-                            <button onclick="openCategoryModal(${cat.id})" class="p-2 text-slate-400 hover:text-slate-700 text-xs rounded-lg hover:bg-slate-50 transition">
-                                <i class="fa-solid fa-pen-to-square"></i>
-                            </button>
-                            <button onclick="deleteCategory(${cat.id})" class="p-2 text-rose-400 hover:text-rose-600 text-xs rounded-lg hover:bg-rose-50 transition">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
+                        <div class="flex gap-1">
+                            <button onclick="openCategoryModal(${cat.id})" class="p-1 text-slate-400 hover:text-slate-600"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button onclick="deleteCategory(${cat.id})" class="p-1 text-rose-400 hover:text-rose-600"><i class="fa-solid fa-trash"></i></button>
                         </div>
                     </div>
                 `;
@@ -1849,6 +1879,7 @@
         }
 
         window.addEventListener('DOMContentLoaded', () => {
+            loadLocalOrDefaultData();
             fetchDataFromGoogleSheet(false);
             switchRole('STAFF');
         });
