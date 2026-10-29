@@ -663,7 +663,7 @@
 
     <!-- Application Logic -->
     <script>
-        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbziDnP1pZIZlxbsNQc231baQk8p0A2fZ5zFtrF65wIPYFOmQzW2S-IxZR1XMzBcj6DCdw/exec';
+        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxmuap44wjA1u5taO7CHUUNorlFk8t9tV_caB2yDe1DuuuU90tMUfHyAsJCdY9_ipp1-w/exec';
         let googleScriptUrl = DEFAULT_SCRIPT_URL;
 
         const OWNER_PASSWORD = '037cafe';
@@ -753,6 +753,7 @@
                     categories = resData.categories;
                 }
 
+                // ดึงข้อมูลประวัติ PurchaseHistory จากชีทเข้าตัวแปร purchases และบันทึก localStorage[cite: 24]
                 if (resData.purchases && Array.isArray(resData.purchases)) {
                     purchases = resData.purchases;
                 }
@@ -789,7 +790,7 @@
                     });
 
                     saveToLocalStorage();
-                    if (showToastAlert) showToast('ซิงค์ข้อมูลสต๊อกเรียบร้อยแล้ว');
+                    if (showToastAlert) showToast('ซิงค์ข้อมูลสต๊อกและปฏิทินเรียบร้อยแล้ว');
                 } else {
                     loadLocalOrDefaultData();
                 }
@@ -1368,7 +1369,7 @@
             const item = items.find(i => Number(i.id) === Number(selectedAdjustItemId));
             if (!item) return;
 
-            const todayDateStr = getFormattedDate();
+            const todayDateStr = getFormattedDate(); // วันที่ปัจจุบันรูปแบบ YYYY-MM-DD[cite: 24]
 
             if (selectedAdjustType === 'ADD') {
                 item.stock += qty;
@@ -1378,7 +1379,7 @@
                     item.orderedNote = '';
                 }
 
-                // บันทึกประวัติเข้า Purchases เพื่อให้แสดงผลในหน้าปฏิทินทันที
+                // บันทึกออบเจกต์การซื้อเติมสต๊อกลงใน Purchases เพื่ออัปเดตปฏิทินทันที[cite: 24]
                 const unitCost = Number(item.lastCost || 0);
                 const totalCost = qty * unitCost;
 
@@ -1415,12 +1416,14 @@
             closeAdjustModal();
             renderAllViews();
 
+            // แสดงรายการลงของประจำวันใต้มุมมองปฏิทินทันที[cite: 24]
             if (selectedAdjustType === 'ADD') {
                 showDayDetails(todayDateStr);
             }
 
             showToast(selectedAdjustType === 'ADD' ? 'เติมสต๊อกและบันทึกลงปฏิทินเรียบร้อย' : 'ปรับปรุงสต๊อกเรียบร้อย');
 
+            // ส่งข้อมูลไปยัง Google Sheets (ทั้งแผ่นงานหลัก และแผ่นงาน PurchaseHistory)[cite: 24]
             syncItemToGoogleSheet('quickAdjust', {
                 date: todayDateStr,
                 code: item.code,
