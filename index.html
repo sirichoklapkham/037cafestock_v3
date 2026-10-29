@@ -663,7 +663,7 @@
 
     <!-- Application Logic -->
     <script>
-        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxYzGcYmMvFbid3jk5ct4fHBwx1AbpjSESq-AC4QNfBc8Bx8tHqzryAHzfzPNPNnXn3tQ/exec';
+        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbziDnP1pZIZlxbsNQc231baQk8p0A2fZ5zFtrF65wIPYFOmQzW2S-IxZR1XMzBcj6DCdw/exec';
         let googleScriptUrl = DEFAULT_SCRIPT_URL;
 
         const OWNER_PASSWORD = '037cafe';
@@ -1368,6 +1368,8 @@
             const item = items.find(i => Number(i.id) === Number(selectedAdjustItemId));
             if (!item) return;
 
+            const todayDateStr = getFormattedDate();
+
             if (selectedAdjustType === 'ADD') {
                 item.stock += qty;
                 if (item.stock > item.minAlert) {
@@ -1375,6 +1377,23 @@
                     item.orderedQty = 0;
                     item.orderedNote = '';
                 }
+
+                // บันทึกประวัติเข้า Purchases เพื่อให้แสดงผลในหน้าปฏิทินทันที
+                const unitCost = Number(item.lastCost || 0);
+                const totalCost = qty * unitCost;
+
+                purchases.unshift({
+                    id: Date.now(),
+                    date: todayDateStr,
+                    itemId: item.id,
+                    itemName: item.name,
+                    itemCode: item.code,
+                    unitCost: unitCost,
+                    qty: qty,
+                    unit: item.unit,
+                    total: totalCost,
+                    supplier: `เติมสต๊อกด่วน (${reason})`
+                });
             } else {
                 if (item.stock < qty) return alert('จำนวนสต๊อกคงเหลือมีไม่พอสำหรับการเบิกออก');
                 item.stock -= qty;
@@ -1395,9 +1414,15 @@
             saveToLocalStorage();
             closeAdjustModal();
             renderAllViews();
-            showToast('ปรับปรุงสต๊อกเรียบร้อย');
+
+            if (selectedAdjustType === 'ADD') {
+                showDayDetails(todayDateStr);
+            }
+
+            showToast(selectedAdjustType === 'ADD' ? 'เติมสต๊อกและบันทึกลงปฏิทินเรียบร้อย' : 'ปรับปรุงสต๊อกเรียบร้อย');
 
             syncItemToGoogleSheet('quickAdjust', {
+                date: todayDateStr,
                 code: item.code,
                 name: item.name,
                 type: selectedAdjustType,
@@ -1642,7 +1667,7 @@
                     <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-100 flex justify-between items-center text-xs">
                         <div>
                             <p class="font-bold text-slate-800">${escapeHtml(p.itemName)} <span class="text-[10px] text-slate-400 font-mono">(${escapeHtml(p.itemCode)})</span></p>
-                            <p class="text-[11px] text-slate-500">จำนวน: +${p.qty} | ต้นทุน: ฿${Number(p.unitCost).toFixed(2)} | ร้าน: ${escapeHtml(p.supplier || '-')}</p>
+                            <p class="text-[11px] text-slate-500">จำนวน: +${p.qty} ${escapeHtml(p.unit || '')} | ต้นทุน: ฿${Number(p.unitCost).toFixed(2)} | ร้าน: ${escapeHtml(p.supplier || '-')}</p>
                         </div>
                         <span class="font-bold text-emerald-700 text-xs">฿${Number(p.total).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
                     </div>
