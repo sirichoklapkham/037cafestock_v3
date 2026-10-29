@@ -267,7 +267,7 @@
                     <div class="flex flex-col sm:flex-row items-center gap-2">
                         <div class="relative w-full">
                             <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3.5 text-slate-400 text-xs"></i>
-                            <input type="text" id="inventory-search" placeholder="ค้นหารหัส หรือชื่อสินค้า (ค้นหาง่ายขึ้น กรอกไม่ครบก็เจอ)..." class="w-full pl-9 pr-4 py-2.5 text-xs md:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#C1E1C1] focus:bg-white transition">
+                            <input type="text" id="inventory-search" placeholder="ค้นหารหัส หรือชื่อสินค้า..." class="w-full pl-9 pr-4 py-2.5 text-xs md:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#C1E1C1] focus:bg-white transition">
                         </div>
                         <button onclick="sendLowStockToLine()" class="owner-col hidden w-full sm:w-auto px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 shadow-sm transition flex-shrink-0">
                             <i class="fa-brands fa-line text-sm"></i>
@@ -406,7 +406,7 @@
                 </div>
             </section>
 
-            <!-- CALENDAR TAB (ตารางปฏิทินแสดงยอดลงของประจำวัน) -->
+            <!-- CALENDAR TAB -->
             <section id="tab-calendar" class="tab-content hidden space-y-5">
                 <div class="bg-white p-4 md:p-5 rounded-2xl border border-slate-100 shadow-sm space-y-4">
                     <div class="flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-slate-100 pb-3">
@@ -421,7 +421,6 @@
                         </div>
                     </div>
 
-                    <!-- ตารางปฏิทิน -->
                     <div class="grid grid-cols-7 gap-1 md:gap-2 text-center text-xs font-semibold text-slate-400 mb-1">
                         <div class="text-rose-500 py-1">อา.</div>
                         <div class="py-1">จ.</div>
@@ -434,7 +433,6 @@
                     <div id="calendar-grid" class="grid grid-cols-7 gap-1 md:gap-2 text-xs"></div>
                 </div>
 
-                <!-- แสดงรายละเอียดสินค้าที่ลงของในวันที่เลือก -->
                 <div id="selected-day-details" class="bg-white p-4 md:p-5 rounded-2xl border border-slate-100 shadow-sm hidden space-y-3">
                     <div class="flex justify-between items-center border-b border-slate-100 pb-2">
                         <h4 class="font-bold text-slate-800 text-sm flex items-center gap-2">
@@ -663,7 +661,7 @@
 
     <!-- Application Logic -->
     <script>
-        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby9pGKbbzdYIQkOJA7hzMj6wuayyUklsZQXdM_kha1hdkXYCDhLV_JpOGbT_5F3wiEh/exec';
+        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzuXF7THs1makp7_2mOgUp-9WvN4VatSbHUg6cEeE88fBo47br2SIfHA5sxXSE5qUVtkg/exec';
         let googleScriptUrl = DEFAULT_SCRIPT_URL;
 
         const OWNER_PASSWORD = '037cafe';
@@ -680,7 +678,7 @@
         let autoSyncTimer = null;
 
         let calendarCurrentDate = new Date();
-        let selectedDateStr = getFormattedDate(); // ตัวแปรเก็บวันที่ที่กำลังเลือกในปฏิทิน
+        let selectedDateStr = getFormattedDate(); 
 
         function normalizeText(str) {
             if (!str) return '';
@@ -691,25 +689,36 @@
                 .replace(/\s+/g, '');
         }
 
-        // แปลงรูปแบบวันที่ทุกรูปแบบให้เป็น YYYY-MM-DD
+        // แปลงวันที่ให้อยู่ในรูปแบบ DD/MM/YYYY ทั้งหมด
         function parseToStandardDateStr(dateInput) {
             if (!dateInput) return '';
             if (dateInput instanceof Date) {
-                const y = dateInput.getFullYear();
-                const m = String(dateInput.getMonth() + 1).padStart(2, '0');
                 const d = String(dateInput.getDate()).padStart(2, '0');
-                return `${y}-${m}-${d}`;
+                const m = String(dateInput.getMonth() + 1).padStart(2, '0');
+                const y = dateInput.getFullYear();
+                return `${d}/${m}/${y}`;
             }
             let str = String(dateInput).trim();
             if (str.includes('T')) str = str.split('T')[0];
-            if (str.includes('/')) {
-                const parts = str.split('/');
-                if (parts.length === 3) {
-                    if (parts[0].length === 4) return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
-                    return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+            
+            // ถ้าเป็น YYYY-MM-DD ให้แปลงเป็น DD/MM/YYYY
+            if (str.includes('-')) {
+                const parts = str.split('-');
+                if (parts.length === 3 && parts[0].length === 4) {
+                    return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
                 }
             }
             return str;
+        }
+
+        // แปลงจาก DD/MM/YYYY เป็น ISO Date เพื่อให้คำนวณในปฏิทินได้ถูกต้อง
+        function parseDMYToDateObj(dmyStr) {
+            if (!dmyStr) return null;
+            const parts = dmyStr.split('/');
+            if (parts.length === 3) {
+                return new Date(parts[2], parts[1] - 1, parts[0]);
+            }
+            return new Date(dmyStr);
         }
 
         async function sendLowStockToLine() {
@@ -776,7 +785,6 @@
                     categories = resData.categories;
                 }
 
-                // ดึงและรวมข้อมูล PurchaseHistory (Merge Local + Server เพื่อไม่ให้ข้อมูลหาย)
                 if (resData.purchases && Array.isArray(resData.purchases)) {
                     const serverPurchases = resData.purchases.map(p => ({
                         ...p,
@@ -796,8 +804,11 @@
                         }
                     });
 
-                    // เรียงตามวันที่ล่าสุด
-                    mergedPurchases.sort((a, b) => new Date(b.date) - new Date(a.date));
+                    mergedPurchases.sort((a, b) => {
+                        const dA = parseDMYToDateObj(a.date);
+                        const dB = parseDMYToDateObj(b.date);
+                        return dB - dA;
+                    });
                     purchases = mergedPurchases;
                 }
 
@@ -842,7 +853,6 @@
                 if (showToastAlert) loadLocalOrDefaultData();
             }
 
-            // อัปเดตเฉพาะหน้าจอตามแท็บที่ใช้งานอยู่ เพื่อป้องกันกระตุกและคงสถานะเดิมไว้
             if (activeTabId === 'inventory') {
                 renderInventoryTable();
             } else if (activeTabId === 'calendar') {
@@ -968,7 +978,7 @@
                 showToast('เข้าสู่โหมด เจ้าของร้าน (Owner)');
             } else {
                 startAutoSync();
-                btnStaff.className = 'flex-1 sm:flex-none px-3 py-1.5 rounded-lg transition-all flex items-center justify-center gap-1.5 bg-white text-rose-800 shadow-sm font-semibold';
+                btnStaff.className = 'flex-1 sm:flex-none px-3 py-1.5 rounded-lg transition-all flex items-center justify-center gap-1.5 bg-white text-rose-800 shadow-sm';
                 btnOwner.className = 'flex-1 sm:flex-none px-3 py-1.5 rounded-lg transition-all flex items-center justify-center gap-1.5 text-slate-500 hover:text-slate-800';
                 roleBadge.className = 'hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-[#FDF0F0] text-rose-800';
                 roleBadge.innerHTML = '<span class="w-2 h-2 rounded-full bg-rose-400 animate-pulse"></span>สิทธิ์: พนักงาน (Staff)';
@@ -1036,10 +1046,17 @@
             document.getElementById('stat-total-items').innerText = items.length;
             document.getElementById('stat-low-stock').innerText = lowStockItems.length;
 
-            const currentMonth = new Date().toISOString().slice(0, 7);
+            const now = new Date();
+            const currentMonth = now.getMonth() + 1;
+            const currentYear = now.getFullYear();
+
             const monthTotal = purchases
-                .filter(p => p.date && p.date.startsWith(currentMonth))
+                .filter(p => {
+                    const pDate = parseDMYToDateObj(p.date);
+                    return pDate && (pDate.getMonth() + 1) === currentMonth && pDate.getFullYear() === currentYear;
+                })
                 .reduce((sum, p) => sum + (Number(p.total) || 0), 0);
+
             document.getElementById('stat-month-expense').innerText = `฿${monthTotal.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`;
 
             const totalStockValue = items.reduce((sum, item) => sum + (Number(item.stock) * Number(item.lastCost || 0)), 0);
@@ -1429,7 +1446,7 @@
             const item = items.find(i => Number(i.id) === Number(selectedAdjustItemId));
             if (!item) return;
 
-            const todayDateStr = getFormattedDate();
+            const todayDateStr = getFormattedDate(); 
 
             if (selectedAdjustType === 'ADD') {
                 item.stock += qty;
@@ -1526,7 +1543,12 @@
         }
 
         function initPurchaseForm() {
-            document.getElementById('purchase-date').value = getFormattedDate();
+            const now = new Date();
+            const yyyy = now.getFullYear();
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            const dd = String(now.getDate()).padStart(2, '0');
+            document.getElementById('purchase-date').value = `${yyyy}-${mm}-${dd}`;
+
             const selectEl = document.getElementById('purchase-item-id');
             selectEl.innerHTML = '<option value="">-- เลือกรายการสินค้า --</option>' + 
                 items.map(item => `<option value="${item.id}">${escapeHtml(item.name)} (${escapeHtml(item.code)})</option>`).join('');
@@ -1555,7 +1577,8 @@
 
         function handleSavePurchase(e) {
             e.preventDefault();
-            const date = parseToStandardDateStr(document.getElementById('purchase-date').value);
+            const rawInputDate = document.getElementById('purchase-date').value;
+            const date = parseToStandardDateStr(rawInputDate); // แปลงเป็น DD/MM/YYYY
             const itemId = Number(document.getElementById('purchase-item-id').value);
             const unitCost = Number(document.getElementById('purchase-unit-cost').value);
             const qty = Number(document.getElementById('purchase-qty').value);
@@ -1591,7 +1614,7 @@
             renderPurchaseHistory();
 
             document.getElementById('purchase-form').reset();
-            document.getElementById('purchase-date').value = getFormattedDate();
+            initPurchaseForm();
             document.getElementById('purchase-total-display').innerText = '฿0.00';
             document.getElementById('purchase-unit-label').innerText = '';
 
@@ -1669,13 +1692,10 @@
             const dailyTotals = {};
             purchases.forEach(p => {
                 if (p.date) {
-                    const cleanDateStr = parseToStandardDateStr(p.date);
-                    const parts = cleanDateStr.split('-').map(Number);
-                    if (parts.length === 3) {
-                        const [pYear, pMonth, pDay] = parts;
-                        if (pYear === year && pMonth === (month + 1)) {
-                            dailyTotals[pDay] = (dailyTotals[pDay] || 0) + Number(p.total || 0);
-                        }
+                    const pDateObj = parseDMYToDateObj(p.date);
+                    if (pDateObj && pDateObj.getFullYear() === year && pDateObj.getMonth() === month) {
+                        const d = pDateObj.getDate();
+                        dailyTotals[d] = (dailyTotals[d] || 0) + Number(p.total || 0);
                     }
                 }
             });
@@ -1692,7 +1712,7 @@
             for (let d = 1; d <= daysInMonth; d++) {
                 const total = dailyTotals[d] || 0;
                 const isToday = isCurrentMonth && today.getDate() === d;
-                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const dateStr = `${String(d).padStart(2, '0')}/${String(month + 1).padStart(2, '0')}/${year}`;
                 const isSelected = (selectedDateStr === dateStr);
 
                 let borderClass = 'border-slate-100';
@@ -1760,7 +1780,7 @@
             const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = `purchase_history_${getFormattedDate()}.csv`;
+            link.download = `purchase_history_${getFormattedDate().replace(/\//g, '-')}.csv`;
             link.click();
         }
 
