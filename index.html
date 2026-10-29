@@ -663,7 +663,7 @@
 
     <!-- Application Logic -->
     <script>
-        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzKdl_I7ZRTo-2DjerEsip77poFt9ZG202AJOY3RKuB7AAv6xkhalAYtIVxRPaksBl-Xg/exec';
+        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby9pGKbbzdYIQkOJA7hzMj6wuayyUklsZQXdM_kha1hdkXYCDhLV_JpOGbT_5F3wiEh/exec';
         let googleScriptUrl = DEFAULT_SCRIPT_URL;
 
         const OWNER_PASSWORD = '037cafe';
@@ -750,7 +750,7 @@
         function getFormattedDate(daysAgo = 0) {
             const d = new Date();
             d.setDate(d.getDate() - daysAgo);
-            return d.toISOString().split('T')[0];
+            return parseToStandardDateStr(d);
         }
 
         function getFormattedDateTime() {
@@ -1519,7 +1519,7 @@
 
         function handleSavePurchase(e) {
             e.preventDefault();
-            const date = document.getElementById('purchase-date').value;
+            const date = parseToStandardDateStr(document.getElementById('purchase-date').value);
             const itemId = Number(document.getElementById('purchase-item-id').value);
             const unitCost = Number(document.getElementById('purchase-unit-cost').value);
             const qty = Number(document.getElementById('purchase-qty').value);
@@ -1630,7 +1630,7 @@
             const firstDay = new Date(year, month, 1).getDay();
             const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-            // คำนวณยอดลงของรายวันจากข้อมูล purchases โดยแมปวันที่ YYYY-MM-DD
+            // คำนวณยอดรวมรายวันจากประวัติการลงของ (purchases)
             const dailyTotals = {};
             purchases.forEach(p => {
                 if (p.date) {
@@ -1638,7 +1638,7 @@
                     const parts = cleanDateStr.split('-').map(Number);
                     if (parts.length === 3) {
                         const [pYear, pMonth, pDay] = parts;
-                        if (pYear === year && pMonth === month + 1) {
+                        if (pYear === year && pMonth === (month + 1)) {
                             dailyTotals[pDay] = (dailyTotals[pDay] || 0) + Number(p.total || 0);
                         }
                     }
@@ -1675,7 +1675,7 @@
                         </div>
                         ${total > 0 ? `
                             <div class="bg-emerald-50 border border-emerald-100 text-emerald-800 rounded-lg p-1 text-[10px] font-semibold text-center mt-1">
-                                ฿${total.toLocaleString('th-TH')}
+                                ฿${total.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </div>
                         ` : ''}
                     </div>
@@ -1686,19 +1686,19 @@
         }
 
         function showDayDetails(dateStr) {
-            selectedDateStr = dateStr;
-            renderCalendarView(); // อัปเดตไฮไลต์ช่องวันที่เลือกบนปฏิทิน
+            selectedDateStr = parseToStandardDateStr(dateStr);
+            renderCalendarView(); // อัปเดตไฮไลต์ปฏิทินช่องที่คลิก
 
             const container = document.getElementById('selected-day-details');
             const dateTitle = document.getElementById('detail-date-title');
             const totalDisplay = document.getElementById('detail-total-amount');
             const itemsList = document.getElementById('detail-items-list');
 
-            const dayPurchases = purchases.filter(p => parseToStandardDateStr(p.date) === dateStr);
+            const dayPurchases = purchases.filter(p => parseToStandardDateStr(p.date) === selectedDateStr);
             const totalSum = dayPurchases.reduce((sum, p) => sum + Number(p.total || 0), 0);
 
-            dateTitle.innerText = dateStr;
-            totalDisplay.innerText = `ยอดรวม: ฿${totalSum.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`;
+            dateTitle.innerText = selectedDateStr;
+            totalDisplay.innerText = `ยอดรวม: ฿${totalSum.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
             if (dayPurchases.length === 0) {
                 itemsList.innerHTML = `<p class="text-xs text-slate-400 py-3 text-center">ไม่มีรายการลงของในวันที่นี้</p>`;
