@@ -60,14 +60,8 @@
         ::-webkit-scrollbar-track { background: #F1F5F9; }
         ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
         .modal-backdrop { background-color: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px); }
-        
-        .dark-card-gradient {
-            background: linear-gradient(145deg, #1F2937 0%, #111827 100%);
-        }
-
-        .pb-safe {
-            padding-bottom: env(safe-area-inset-bottom, 1rem);
-        }
+        .dark-card-gradient { background: linear-gradient(145deg, #1F2937 0%, #111827 100%); }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 1rem); }
     </style>
 </head>
 <body class="min-h-screen flex flex-col antialiased pb-24">
@@ -78,9 +72,7 @@
             <div class="flex items-center space-x-2.5">
                 <img src="https://drive.google.com/thumbnail?id=1UTeeGot9RJL-NB4NjdgK35m7UeQIL-fe&sz=w512" alt="Logo" class="w-8 h-8 rounded-full border border-slate-700 object-cover">
                 <div>
-                    <h1 class="font-bold text-sm leading-tight text-white flex items-center gap-1">
-                        037Cafe 
-                    </h1>
+                    <h1 class="font-bold text-sm leading-tight text-white flex items-center gap-1">037Cafe</h1>
                     <p class="text-[10px] text-amber-400 font-medium">POS & Expense Audit</p>
                 </div>
             </div>
@@ -139,7 +131,6 @@
                 <div id="calendar-grid" class="grid grid-cols-7 gap-1.5 text-xs"></div>
             </div>
 
-            <!-- ชิปสถานะ -->
             <div class="bg-emerald-50 border border-emerald-200/60 rounded-2xl p-3 flex items-center justify-between text-emerald-800 text-xs font-medium shadow-xs">
                 <div class="flex items-center space-x-2">
                     <i class="fa-regular fa-circle-check text-emerald-500 text-base"></i>
@@ -241,10 +232,9 @@
 
     </main>
 
-    <!-- Bottom Navigation Bar (สลับสีแล้ว: เติมสต๊อก=เขียว, เบิกออก=แดง) -->
+    <!-- Bottom Navigation Bar (สลับสีปุ่มแล้ว: เติมสต๊อก=เขียว, เบิกออก=แดง) -->
     <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-40 pb-safe shadow-lg">
         <div class="max-w-md mx-auto grid grid-cols-4 items-center justify-items-center py-2 px-1">
-            
             <button onclick="switchTab('calendar')" id="nav-calendar" class="nav-btn flex flex-col items-center justify-center w-full py-1 text-amber-500 font-semibold">
                 <i class="fa-solid fa-calendar-days text-lg"></i>
                 <span class="text-[10px] mt-1">ปฏิทิน/ยอด</span>
@@ -337,69 +327,6 @@
         </div>
     </div>
 
-    <!-- MARK ORDERED MODAL -->
-    <div id="mark-ordered-modal" class="fixed inset-0 modal-backdrop z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-xs w-full p-5 shadow-xl space-y-3">
-            <h3 class="font-bold text-slate-800 text-sm">สั่งซื้อแล้ว: <span id="ordered-item-name" class="text-amber-600"></span></h3>
-            
-            <form onsubmit="handleSaveOrderedStatus(event)" class="space-y-3 text-xs">
-                <input type="hidden" id="ordered-item-id">
-                <div>
-                    <label class="block text-slate-600 font-medium mb-1">จำนวนที่สั่งซื้อ (<span id="ordered-item-unit"></span>)</label>
-                    <input type="number" id="ordered-qty-input" step="0.01" min="0.01" required placeholder="เช่น 10" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none">
-                </div>
-
-                <div>
-                    <label class="block text-slate-600 font-medium mb-1">หมายเหตุ / ร้านที่สั่งซื้อ</label>
-                    <input type="text" id="ordered-note-input" placeholder="เช่น รอของส่ง 2 วัน..." class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none">
-                </div>
-
-                <div class="flex justify-end gap-2 pt-1">
-                    <button type="button" onclick="closeMarkOrderedModal()" class="px-3 py-1.5 text-slate-500">ยกเลิก</button>
-                    <button type="submit" class="bg-amber-500 text-white font-bold px-4 py-1.5 rounded-xl">ยืนยันสั่งซื้อแล้ว</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- ITEM EDIT/ADD MODAL -->
-    <div id="item-modal" class="fixed inset-0 modal-backdrop z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-xs w-full p-5 shadow-xl space-y-3">
-            <h3 id="item-modal-title" class="font-bold text-slate-800 text-sm">เพิ่มรายการสินค้า</h3>
-            <form id="item-form" onsubmit="handleSaveItem(event)" class="space-y-2.5 text-xs">
-                <input type="hidden" id="item-form-id">
-                <input type="text" id="item-form-code" required placeholder="รหัสสินค้า" class="w-full p-2 bg-slate-50 border rounded-xl outline-none">
-                <input type="text" id="item-form-name" required placeholder="ชื่อสินค้า" class="w-full p-2 bg-slate-50 border rounded-xl outline-none">
-                <select id="item-form-category" required class="w-full p-2 bg-slate-50 border rounded-xl outline-none"></select>
-                <div class="grid grid-cols-3 gap-1.5">
-                    <input type="number" id="item-form-stock" required placeholder="คงเหลือ" class="w-full p-2 bg-slate-50 border rounded-xl outline-none">
-                    <input type="text" id="item-form-unit" required placeholder="หน่วย" class="w-full p-2 bg-slate-50 border rounded-xl outline-none">
-                    <input type="number" id="item-form-min" required placeholder="เตือนต่ำ" class="w-full p-2 bg-slate-50 border rounded-xl outline-none">
-                </div>
-                <input type="number" id="item-form-cost" step="0.01" placeholder="ต้นทุนล่าสุด (฿)" class="w-full p-2 bg-slate-50 border rounded-xl outline-none">
-                
-                <div class="flex justify-end gap-2 pt-2">
-                    <button type="button" onclick="closeItemModal()" class="px-3 py-1.5 text-slate-500">ยกเลิก</button>
-                    <button type="submit" class="bg-amber-500 text-slate-950 font-bold px-4 py-1.5 rounded-xl">บันทึก</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- CATEGORY MODAL -->
-    <div id="category-modal" class="fixed inset-0 modal-backdrop z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-xs w-full p-5 shadow-xl space-y-3">
-            <h3 class="font-bold text-slate-800 text-sm">เพิ่มหมวดหมู่สินค้า</h3>
-            <form onsubmit="handleSaveCategory(event)" class="space-y-3 text-xs">
-                <input type="text" id="cat-form-name" required placeholder="ชื่อหมวดหมู่..." class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none">
-                <div class="flex justify-end gap-2">
-                    <button type="button" onclick="closeCategoryModal()" class="px-3 py-1.5 text-slate-500">ยกเลิก</button>
-                    <button type="submit" class="bg-amber-500 text-slate-950 font-bold px-4 py-1.5 rounded-xl">บันทึก</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
     <!-- TOAST NOTIFICATION -->
     <div id="toast" class="fixed bottom-16 left-1/2 transform -translate-x-1/2 z-50 opacity-0 transition-all duration-300 bg-slate-900 text-amber-400 px-4 py-2.5 rounded-full shadow-lg text-xs font-semibold flex items-center space-x-2">
         <i id="toast-icon" class="fa-solid fa-circle-check"></i>
@@ -407,7 +334,7 @@
     </div>
 
     <script>
-        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxwQX5y8MRANZMJYMZvsCDl5Ryz82BvZH3O2DmMV81o6GKq31SNs_JXFfWFCQgmOIFhkA/exec';
+        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwY8o6gyedGKpZpU95kTkeCUC13oeXtFvf1SFeJLeBuawByBKUYFu2jqJ4CVQbKNgTgZQ/exec';
         let googleScriptUrl = DEFAULT_SCRIPT_URL;
 
         const OWNER_PASSWORD = '037cafe';
@@ -431,13 +358,15 @@
             return String(str).toLowerCase().replace(/[\u0300-\u036f]/g, '').replace(/[่้๊๋็์ํ๎]/g, '').replace(/\s+/g, '');
         }
 
+        // แปลงวันที่ให้อยู่ในฟอร์แมต DD/MM/YYYY เดียวกันทุกแพลตฟอร์ม (แปลง พ.ศ. เป็น ค.ศ. อัตโนมัติ)
         function parseToStandardDateStr(dateInput) {
             if (!dateInput) return '';
             if (dateInput instanceof Date) {
                 if (isNaN(dateInput.getTime())) return '';
                 const d = String(dateInput.getDate()).padStart(2, '0');
                 const m = String(dateInput.getMonth() + 1).padStart(2, '0');
-                const y = dateInput.getFullYear();
+                let y = dateInput.getFullYear();
+                if (y > 2500) y -= 543;
                 return `${d}/${m}/${y}`;
             }
             let str = String(dateInput).trim();
@@ -446,7 +375,16 @@
             if (str.includes('-')) {
                 const parts = str.split('-');
                 if (parts.length === 3 && parts[0].length === 4) {
-                    return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
+                    let y = parseInt(parts[0], 10);
+                    if (y > 2500) y -= 543;
+                    return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${y}`;
+                }
+            } else if (str.includes('/')) {
+                const parts = str.split('/');
+                if (parts.length === 3) {
+                    let y = parseInt(parts[2], 10);
+                    if (y > 2500) y -= 543;
+                    return `${parts[0].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${y}`;
                 }
             }
             return str;
@@ -456,7 +394,9 @@
             if (!dmyStr) return null;
             const parts = String(dmyStr).split('/');
             if (parts.length === 3) {
-                return new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+                let y = Number(parts[2]);
+                if (y > 2500) y -= 543;
+                return new Date(y, Number(parts[1]) - 1, Number(parts[0]));
             }
             const dt = new Date(dmyStr);
             return isNaN(dt.getTime()) ? null : dt;
@@ -473,23 +413,6 @@
             return d.toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' });
         }
 
-        async function sendLowStockToLine() {
-            if (!googleScriptUrl) return alert('กรุณาตั้งค่า Google Script URL ก่อนทำรายการ');
-            showToast('กำลังส่งสรุปสต๊อกต่ำเข้า LINE...');
-            try {
-                await fetch(googleScriptUrl, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'checkLowStockSummary' })
-                });
-                showToast('ส่งสรุปรายการสต๊อกต่ำเข้า LINE เรียบร้อยแล้ว!');
-            } catch (err) {
-                console.error('Send Low Stock LINE error:', err);
-                alert('เกิดข้อผิดพลาดในการส่งข้อความสรุปสต๊อกต่ำเข้า LINE');
-            }
-        }
-
         async function fetchDataFromGoogleSheet(showToastAlert = false) {
             if (!googleScriptUrl) {
                 loadLocalOrDefaultData();
@@ -497,27 +420,21 @@
             }
 
             try {
-                if (showToastAlert) showToast('กำลังซิงค์ข้อมูลจาก Sheets...');
+                if (showToastAlert) showToast('กำลังซิงค์ข้อมูลเรียลไทม์...');
                 const res = await fetch(googleScriptUrl + (googleScriptUrl.includes('?') ? '&' : '?') + '_t=' + Date.now());
                 const resData = await res.json();
 
                 if (resData.categories && Array.isArray(resData.categories)) categories = resData.categories;
 
-                // 1. ดึงรายการเติมสต๊อก (PurchaseHistory)
                 if (resData.purchases && Array.isArray(resData.purchases)) {
                     purchases = resData.purchases.map(p => ({ ...p, date: parseToStandardDateStr(p.date) }));
                     purchases.sort((a, b) => parseDMYToDateObj(b.date) - parseDMYToDateObj(a.date));
                 }
 
-                // 2. ดึงประวัติเบิกออก / ปรับปรุง (AdjustLogs)
                 if (resData.adjustLogs && Array.isArray(resData.adjustLogs)) {
-                    adjustLogs = resData.adjustLogs.map(l => ({
-                        ...l,
-                        date: parseToStandardDateStr(l.date || l.timestamp)
-                    }));
+                    adjustLogs = resData.adjustLogs.map(l => ({ ...l, date: parseToStandardDateStr(l.date || l.timestamp) }));
                 }
 
-                // 3. ดึงรายการสินค้า (Items)
                 const rawItems = Array.isArray(resData) ? resData : (resData.items || []);
                 if (rawItems.length > 0) {
                     items = rawItems.map((row, idx) => {
@@ -560,7 +477,7 @@
 
         function startAutoSync() {
             if (autoSyncTimer) clearInterval(autoSyncTimer);
-            autoSyncTimer = setInterval(() => fetchDataFromGoogleSheet(false), 10000);
+            autoSyncTimer = setInterval(() => fetchDataFromGoogleSheet(false), 5000);
         }
 
         function stopAutoSync() {
@@ -718,7 +635,6 @@
             const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
 
             for (let d = 1; d <= daysInMonth; d++) {
-                const total = dailyTotals[d] || 0;
                 const isToday = isCurrentMonth && today.getDate() === d;
                 const dateStr = `${String(d).padStart(2, '0')}/${String(month + 1).padStart(2, '0')}/${year}`;
                 const isSelected = (selectedDateStr === dateStr);
@@ -727,20 +643,13 @@
                 const hasSub = Boolean(dailyHasSub[d]);
 
                 let dotColorClass = '';
-                if (hasAdd && hasSub) {
-                    dotColorClass = 'bg-amber-500';
-                } else if (hasAdd) {
-                    dotColorClass = 'bg-emerald-500'; // เขียว = เติมสต๊อก
-                } else if (hasSub) {
-                    dotColorClass = 'bg-rose-500';    // แดง = เบิกออก
-                }
+                if (hasAdd && hasSub) dotColorClass = 'bg-amber-500';
+                else if (hasAdd) dotColorClass = 'bg-emerald-500'; // จุดเขียว = เติมสต๊อก
+                else if (hasSub) dotColorClass = 'bg-rose-500';    // จุดแดง = เบิกออก
 
                 let bgClass = 'bg-slate-50 text-slate-700';
-                if (isSelected) {
-                    bgClass = 'bg-amber-500 text-slate-950 font-bold shadow-md';
-                } else if (isToday) {
-                    bgClass = 'bg-amber-100 text-amber-900 border border-amber-300';
-                }
+                if (isSelected) bgClass = 'bg-amber-500 text-slate-950 font-bold shadow-md';
+                else if (isToday) bgClass = 'bg-amber-100 text-amber-900 border border-amber-300';
 
                 html += `
                     <div onclick="showDayDetails('${dateStr}')" class="p-1.5 min-h-[50px] rounded-2xl ${bgClass} transition cursor-pointer flex flex-col justify-between items-center">
@@ -792,7 +701,7 @@
                     `;
                 });
 
-                // รายการปรับปรุง/เบิกออก (สีแดง)
+                // รายการเบิกออก (สีแดง)
                 dayLogs.forEach(l => {
                     const isSub = l.type === 'SUB';
                     html += `
@@ -815,14 +724,9 @@
             renderCalendarView();
         }
 
-        /* ------------------ QUICK ADJUSTMENT (เติมสต๊อก / เบิกออก) ------------------ */
-        function triggerQuickAddModal() {
-            openQuickAdjustModalWithMode('ADD');
-        }
-
-        function triggerQuickSubModal() {
-            openQuickAdjustModalWithMode('SUB');
-        }
+        /* ------------------ QUICK ADJUSTMENT ------------------ */
+        function triggerQuickAddModal() { openQuickAdjustModalWithMode('ADD'); }
+        function triggerQuickSubModal() { openQuickAdjustModalWithMode('SUB'); }
 
         function openQuickAdjustModalWithMode(mode, itemId = null) {
             const selectEl = document.getElementById('adjust-select-item');
@@ -877,9 +781,7 @@
             }
         }
 
-        function closeAdjustModal() {
-            document.getElementById('quick-adjust-modal').classList.add('hidden');
-        }
+        function closeAdjustModal() { document.getElementById('quick-adjust-modal').classList.add('hidden'); }
 
         function submitQuickAdjust() {
             const itemId = Number(document.getElementById('adjust-select-item').value);
@@ -896,42 +798,11 @@
             if (selectedAdjustType === 'ADD') {
                 item.stock += qty;
                 item.lastCost = unitCost;
-                if (item.stock > item.minAlert) {
-                    item.isOrdered = false;
-                    item.orderedQty = 0;
-                    item.orderedNote = '';
-                }
-
-                const totalCost = qty * unitCost;
-
-                purchases.unshift({
-                    id: Date.now(),
-                    date: todayDateStr,
-                    itemId: item.id,
-                    itemName: item.name,
-                    itemCode: item.code,
-                    unitCost: unitCost,
-                    qty: qty,
-                    unit: item.unit,
-                    total: totalCost,
-                    supplier: reason
-                });
+                purchases.unshift({ id: Date.now(), date: todayDateStr, itemId: item.id, itemName: item.name, itemCode: item.code, unitCost: unitCost, qty: qty, unit: item.unit, total: qty * unitCost, supplier: reason });
             } else {
                 if (item.stock < qty) return alert('สต๊อกคงเหลือไม่พอสำหรับการเบิกออก');
                 item.stock -= qty;
-
-                adjustLogs.unshift({
-                    id: Date.now(),
-                    timestamp: getFormattedDateTime(),
-                    date: todayDateStr,
-                    itemId: item.id,
-                    itemName: item.name,
-                    itemCode: item.code,
-                    type: selectedAdjustType,
-                    qty: qty,
-                    unit: item.unit,
-                    reason: reason
-                });
+                adjustLogs.unshift({ id: Date.now(), timestamp: getFormattedDateTime(), date: todayDateStr, itemId: item.id, itemName: item.name, itemCode: item.code, type: selectedAdjustType, qty: qty, unit: item.unit, reason: reason });
             }
 
             saveToLocalStorage();
@@ -939,61 +810,10 @@
             renderAllViews();
             showToast(selectedAdjustType === 'ADD' ? 'เติมสต๊อกเรียบร้อย (สีเขียว)' : 'เบิกสต๊อกออกเรียบร้อย (สีแดง)');
 
-            syncItemToGoogleSheet('quickAdjust', {
-                date: todayDateStr,
-                code: item.code,
-                name: item.name,
-                type: selectedAdjustType,
-                qty: qty,
-                unitCost: unitCost,
-                reason: reason
-            });
+            syncItemToGoogleSheet('quickAdjust', { date: todayDateStr, code: item.code, name: item.name, type: selectedAdjustType, qty: qty, unitCost: unitCost, reason: reason });
         }
 
         /* ------------------ MANAGEMENT & RENDER ------------------ */
-        function openMarkOrderedModal(itemId) {
-            const item = items.find(i => Number(i.id) === Number(itemId));
-            if (!item) return;
-
-            document.getElementById('ordered-item-id').value = item.id;
-            document.getElementById('ordered-item-name').innerText = item.name;
-            document.getElementById('ordered-item-unit').innerText = item.unit;
-            document.getElementById('ordered-qty-input').value = item.orderedQty || '';
-            document.getElementById('ordered-note-input').value = item.orderedNote || '';
-
-            document.getElementById('mark-ordered-modal').classList.remove('hidden');
-        }
-
-        function closeMarkOrderedModal() {
-            document.getElementById('mark-ordered-modal').classList.add('hidden');
-        }
-
-        function handleSaveOrderedStatus(e) {
-            e.preventDefault();
-            const itemId = Number(document.getElementById('ordered-item-id').value);
-            const qty = Number(document.getElementById('ordered-qty-input').value);
-            const note = document.getElementById('ordered-note-input').value.trim();
-
-            const item = items.find(i => Number(i.id) === itemId);
-            if (!item) return;
-
-            item.isOrdered = true;
-            item.orderedQty = qty;
-            item.orderedNote = note;
-
-            saveToLocalStorage();
-            closeMarkOrderedModal();
-            renderAllViews();
-            showToast(`ระบุ "${item.name}" เป็นสั่งซื้อแล้ว (${qty} ${item.unit})`);
-
-            syncItemToGoogleSheet('markOrdered', {
-                code: item.code,
-                name: item.name,
-                orderedQty: qty,
-                orderedNote: note
-            });
-        }
-
         function renderInventoryTable() {
             const container = document.getElementById('inventory-mobile-list');
             if (!container) return;
@@ -1020,19 +840,9 @@
 
             container.innerHTML = filtered.map(item => {
                 const isLow = Number(item.stock) <= Number(item.minAlert);
-                let statusBadge = '';
-                if (item.isOrdered) {
-                    statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-700">สั่งแล้ว (${item.orderedQty} ${escapeHtml(item.unit)})</span>`;
-                } else if (isLow) {
-                    statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-100 text-rose-700">สต๊อกต่ำ</span>`;
-                } else {
-                    statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700">ปกติ</span>`;
-                }
-
-                let ownerOrderBtn = '';
-                if (currentRole === 'OWNER' && isLow && !item.isOrdered) {
-                    ownerOrderBtn = `<button onclick="openMarkOrderedModal(${item.id})" class="px-2.5 py-1.5 bg-amber-500 text-white font-bold rounded-xl text-xs shadow-xs">สั่งซื้อแล้ว</button>`;
-                }
+                let statusBadge = item.isOrdered 
+                    ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-700">สั่งแล้ว (${item.orderedQty} ${escapeHtml(item.unit)})</span>` 
+                    : (isLow ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-100 text-rose-700">สต๊อกต่ำ</span>` : `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700">ปกติ</span>`);
 
                 return `
                     <div class="bg-white p-3.5 rounded-2xl border border-slate-100 shadow-xs space-y-2">
@@ -1049,14 +859,8 @@
                                 <p class="font-bold ${isLow ? 'text-rose-600' : 'text-slate-700'}">${item.stock} ${escapeHtml(item.unit)}</p>
                             </div>
                             <div class="flex gap-1.5">
-                                ${ownerOrderBtn}
-                                <button onclick="openQuickAdjustModalWithMode('ADD', ${item.id})" class="px-2.5 py-1.5 bg-emerald-600 text-white font-bold rounded-xl text-xs shadow-xs">
-                                    + เติม
-                                </button>
-                                <button onclick="openQuickAdjustModalWithMode('SUB', ${item.id})" class="px-2.5 py-1.5 bg-rose-500 text-white font-bold rounded-xl text-xs shadow-xs">
-                                    - เบิก
-                                </button>
-                                ${currentRole === 'OWNER' ? `<button onclick="openItemModal(${item.id})" class="p-1.5 text-slate-400 hover:text-slate-600"><i class="fa-solid fa-pen-to-square"></i></button>` : ''}
+                                <button onclick="openQuickAdjustModalWithMode('ADD', ${item.id})" class="px-2.5 py-1.5 bg-emerald-600 text-white font-bold rounded-xl text-xs shadow-xs">+ เติม</button>
+                                <button onclick="openQuickAdjustModalWithMode('SUB', ${item.id})" class="px-2.5 py-1.5 bg-rose-500 text-white font-bold rounded-xl text-xs shadow-xs">- เบิก</button>
                             </div>
                         </div>
                     </div>
@@ -1078,53 +882,6 @@
 
             const totalStockValue = items.reduce((sum, item) => sum + (Number(item.stock) * Number(item.lastCost || 0)), 0);
             document.getElementById('stat-total-stock-value').innerText = `฿${totalStockValue.toLocaleString('th-TH')}`;
-
-            const lowListContainer = document.getElementById('dashboard-low-stock-list');
-            if (lowStockItems.length === 0) {
-                lowListContainer.innerHTML = `<p class="text-xs text-slate-400 py-2 text-center">ไม่มีสินค้าสต๊อกต่ำ</p>`;
-            } else {
-                lowListContainer.innerHTML = lowStockItems.map(item => `
-                    <div class="p-2 bg-rose-50 rounded-xl border border-rose-100 flex justify-between items-center text-xs">
-                        <div>
-                            <p class="font-bold text-slate-800">${escapeHtml(item.name)}</p>
-                            <p class="text-[10px] text-rose-600">เหลือ: ${item.stock} ${escapeHtml(item.unit)}</p>
-                        </div>
-                        <button onclick="openQuickAdjustModalWithMode('ADD', ${item.id})" class="px-2 py-1 bg-emerald-600 text-white font-bold rounded-lg text-[10px]">+ เติม</button>
-                    </div>
-                `).join('');
-            }
-
-            renderChart();
-        }
-
-        function renderChart() {
-            const ctx = document.getElementById('categoryChart')?.getContext('2d');
-            if (!ctx) return;
-            const labels = categories.map(c => c.name);
-            const dataCounts = categories.map(c => {
-                return items.filter(i => Number(i.categoryId) === Number(c.id)).reduce((acc, curr) => acc + Number(curr.stock), 0);
-            });
-
-            if (categoryChartInstance) categoryChartInstance.destroy();
-
-            categoryChartInstance = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'จำนวนสต๊อกรวม',
-                        data: dataCounts,
-                        backgroundColor: '#F59E0B',
-                        borderRadius: 6
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true } }
-                }
-            });
         }
 
         function renderAdjustLogs() {
@@ -1152,110 +909,9 @@
             }).join('');
         }
 
-        function clearAdjustLogs() {
-            if (confirm('ล้างประวัติการปรับปรุงสต๊อกทั้งหมดใช่หรือไม่?')) {
-                adjustLogs = [];
-                saveToLocalStorage();
-                renderAdjustLogs();
-                showToast('ล้างประวัติเรียบร้อย');
-            }
-        }
-
-        function openItemModal(itemId = null) {
-            populateCategoryDropdowns();
-            const modal = document.getElementById('item-modal');
-            const title = document.getElementById('item-modal-title');
-            const form = document.getElementById('item-form');
-
-            if (itemId) {
-                const item = items.find(i => Number(i.id) === Number(itemId));
-                if (!item) return;
-                title.innerText = 'แก้ไขรายการสินค้า';
-                document.getElementById('item-form-id').value = item.id;
-                document.getElementById('item-form-code').value = item.code;
-                document.getElementById('item-form-category').value = item.categoryId;
-                document.getElementById('item-form-name').value = item.name;
-                document.getElementById('item-form-stock').value = item.stock;
-                document.getElementById('item-form-unit').value = item.unit;
-                document.getElementById('item-form-min').value = item.minAlert;
-                document.getElementById('item-form-cost').value = item.lastCost;
-            } else {
-                title.innerText = 'เพิ่มรายการสินค้า';
-                form.reset();
-                document.getElementById('item-form-id').value = '';
-            }
-            modal.classList.remove('hidden');
-        }
-
-        function closeItemModal() { document.getElementById('item-modal').classList.add('hidden'); }
-
-        function handleSaveItem(e) {
-            e.preventDefault();
-            const idVal = document.getElementById('item-form-id').value;
-            const code = document.getElementById('item-form-code').value.trim();
-            const categoryId = Number(document.getElementById('item-form-category').value);
-            const name = document.getElementById('item-form-name').value.trim();
-            const stock = Number(document.getElementById('item-form-stock').value);
-            const unit = document.getElementById('item-form-unit').value.trim();
-            const minAlert = Number(document.getElementById('item-form-min').value);
-            const lastCost = Number(document.getElementById('item-form-cost').value) || 0;
-
-            const catObj = categories.find(c => Number(c.id) === categoryId);
-            const categoryName = catObj ? catObj.name : 'ทั่วไป';
-
-            const newItemObj = {
-                id: idVal ? Number(idVal) : Date.now(),
-                code, categoryId, categoryName, name, stock, unit, minAlert, lastCost,
-                isOrdered: false, orderedQty: 0, orderedNote: ''
-            };
-
-            if (idVal) {
-                const idx = items.findIndex(i => Number(i.id) === Number(idVal));
-                if (idx !== -1) items[idx] = { ...items[idx], ...newItemObj };
-            } else {
-                items.push(newItemObj);
-            }
-
-            saveToLocalStorage();
-            closeItemModal();
-            renderAllViews();
-            showToast('บันทึกสินค้าเรียบร้อย');
-            syncItemToGoogleSheet('saveItem', newItemObj);
-        }
-
-        function openCategoryModal() { document.getElementById('category-modal').classList.remove('hidden'); }
-        function closeCategoryModal() { document.getElementById('category-modal').classList.add('hidden'); }
-
-        function handleSaveCategory(e) {
-            e.preventDefault();
-            const name = document.getElementById('cat-form-name').value.trim();
-            if (name) {
-                categories.push({ id: Date.now(), name });
-                saveToLocalStorage();
-                closeCategoryModal();
-                renderAllViews();
-                showToast('เพิ่มหมวดหมู่เรียบร้อย');
-            }
-        }
-
-        function exportPurchasesCSV() {
-            if (purchases.length === 0) return alert('ไม่มีข้อมูลส่งออก');
-            let csv = 'Date,Code,Name,Qty,UnitCost,Total,Supplier\n';
-            purchases.forEach(p => {
-                csv += `"${p.date}","${p.itemCode}","${p.itemName}",${p.qty},${p.unitCost},${p.total},"${p.supplier || ''}"\n`;
-            });
-            const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = `purchase_history_${getFormattedDate().replace(/\//g, '-')}.csv`;
-            link.click();
-        }
-
         function populateCategoryDropdowns() {
             const catFilter = document.getElementById('inventory-cat-filter');
-            const itemCatForm = document.getElementById('item-form-category');
             if (catFilter) catFilter.innerHTML = '<option value="ALL">หมวดหมู่ทั้งหมด</option>' + categories.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
-            if (itemCatForm) itemCatForm.innerHTML = categories.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
         }
 
         function renderAllViews() {
@@ -1272,10 +928,7 @@
             document.getElementById('toast-message').innerText = msg;
             toast.classList.remove('opacity-0');
             toast.classList.add('opacity-100');
-            setTimeout(() => {
-                toast.classList.remove('opacity-100');
-                toast.classList.add('opacity-0');
-            }, 2500);
+            setTimeout(() => { toast.classList.remove('opacity-100'); toast.classList.add('opacity-0'); }, 2500);
         }
 
         function escapeHtml(str) {
