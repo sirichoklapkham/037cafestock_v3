@@ -300,7 +300,7 @@
     </div>
 
     <script>
-        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwlROhpWo_Lf1UnZjhojm9gYxSTUYosPYpITkmOss8z9uMhmUpHdaXQVs6pyoFM2FFiXQ/exec';
+        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwBRae3iGMvhAnYhobr4EwLlFvqWWPnTkyU6SofexyQRx7wbUdC-1ejkaX_kTevqkq4IA/exec';
         let googleScriptUrl = DEFAULT_SCRIPT_URL;
 
         const OWNER_PASSWORD = '037cafe';
@@ -324,7 +324,7 @@
             return String(str).toLowerCase().replace(/[\u0300-\u036f]/g, '').replace(/[่้๊๋็์ํ๎]/g, '').replace(/\s+/g, '');
         }
 
-        // แปลงรูปแบบวันที่ทุกรูปแบบให้เป็น DD/MM/YYYY (ค.ศ.) และใส่ศูนย์นำหน้าตัวเลข
+        // แปลงรูปแบบวันที่ทุกรูปแบบให้เป็น DD/MM/YYYY (ค.ศ.) และใส่ศูนย์นำหน้าตัวเลขเสมอ
         function parseToStandardDateStr(dateInput) {
             if (!dateInput) return '';
             if (dateInput instanceof Date) {
@@ -342,11 +342,14 @@
             if (str.includes('-')) {
                 const parts = str.split('-');
                 if (parts.length === 3) {
-                    let d = parts[2].padStart(2, '0');
-                    let m = parts[1].padStart(2, '0');
-                    let y = parseInt(parts[0], 10);
-                    if (parts[0].length <= 2) {
+                    let d, m, y;
+                    if (parts[0].length === 4) { // YYYY-MM-DD
+                        y = parseInt(parts[0], 10);
+                        m = parts[1].padStart(2, '0');
+                        d = parts[2].padStart(2, '0');
+                    } else { // DD-MM-YYYY
                         d = parts[0].padStart(2, '0');
+                        m = parts[1].padStart(2, '0');
                         y = parseInt(parts[2], 10);
                     }
                     if (y > 2500) y -= 543;
