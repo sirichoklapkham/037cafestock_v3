@@ -153,7 +153,7 @@
                     <span id="detail-count-badge" class="px-3 py-1 bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[10px] rounded-full font-semibold">0 รายการ</span>
                 </div>
 
-                <div id="detail-items-list" class="space-y-2 max-h-48 overflow-y-auto"></div>
+                <div id="detail-items-list" class="space-y-2 max-h-64 overflow-y-auto"></div>
             </div>
         </section>
 
@@ -299,7 +299,7 @@
     </div>
 
     <script>
-        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxrZHVtLhhJl-KAPgvLdxYZ5qvsXtk4NAUrjosqJhH_jm2_VMHyxD0Z5S6E4NqIGdXlkA/exec';
+        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyP0T--TWARGBwRnALc15FDYIPIIQsWH8gwN05GUzAGhR7O1_l4ZrmB73e4toTice-HRA/exec';
         let googleScriptUrl = DEFAULT_SCRIPT_URL;
 
         const OWNER_PASSWORD = '037cafe';
@@ -666,8 +666,16 @@
 
             if (!dateTitle || !itemsList) return;
 
-            const dayPurchases = purchases.filter(p => parseToStandardDateStr(p.date || p.timestamp) === selectedDateStr);
-            const dayLogs = adjustLogs.filter(l => parseToStandardDateStr(l.date || l.timestamp) === selectedDateStr);
+            // กรองรายการเติมเข้าและเบิกออกที่ตรงกับวันที่ที่เลือก
+            const dayPurchases = purchases.filter(p => {
+                const stdDate = parseToStandardDateStr(p.date || p.timestamp);
+                return stdDate === selectedDateStr;
+            });
+
+            const dayLogs = adjustLogs.filter(l => {
+                const stdDate = parseToStandardDateStr(l.date || l.timestamp);
+                return stdDate === selectedDateStr;
+            });
 
             const totalSum = dayPurchases.reduce((sum, p) => sum + Number(p.total || 0), 0);
 
@@ -705,6 +713,7 @@
                 });
             });
 
+            // จัดเรียงลำดับเวลา (Timestamp) จากล่าสุดไปเก่าที่สุด
             combinedList.sort((a, b) => b.timeMs - a.timeMs);
 
             if (combinedList.length === 0) {
