@@ -334,7 +334,7 @@
     </div>
 
     <script>
-        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxXa-BiO6XkQgH-8e8Gb8LZaO30svovO4UUrAszBwv4CWsgttlID1qNrHgyZXFSvqLRDg/exec';
+        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxG-lEW2-n_jCBnobvlz_tDYJ70LcqpH5QgE0rQJyGCBFKnz-bwD451xNJ3RRi01vunTg/exec';
         let googleScriptUrl = DEFAULT_SCRIPT_URL;
 
         const OWNER_PASSWORD = '037cafe';
@@ -358,7 +358,7 @@
             return String(str).toLowerCase().replace(/[\u0300-\u036f]/g, '').replace(/[่้๊๋็์ํ๎]/g, '').replace(/\s+/g, '');
         }
 
-        // แปลงวันที่ให้อยู่ในฟอร์แมต DD/MM/YYYY เสมอ (แปลง พ.ศ. เป็น ค.ศ. อัตโนมัติ)
+        // แปลงวันที่เป็น DD/MM/YYYY โดยตัดส่วนเวลาทิ้งเสมอกัน 100%
         function parseToStandardDateStr(dateInput) {
             if (!dateInput) return '';
             if (dateInput instanceof Date) {
@@ -370,7 +370,7 @@
                 return `${d}/${m}/${y}`;
             }
             let str = String(dateInput).trim();
-            if (str.includes(' ')) str = str.split(' ')[0]; // ตัดเวลาข้างหลังออกเพื่อเปรียบเทียบเฉพาะวันที่
+            if (str.includes(' ')) str = str.split(' ')[0]; // ตัดข้อความเวลาข้างหลังทิ้ง
             if (str.includes('T')) str = str.split('T')[0];
             
             if (str.includes('-')) {
@@ -428,15 +428,30 @@
                 if (resData.categories && Array.isArray(resData.categories)) categories = resData.categories;
 
                 if (resData.purchases && Array.isArray(resData.purchases)) {
-                    purchases = resData.purchases.map(p => ({ 
+                    const fetchedPurchases = resData.purchases.map(p => ({ 
                         ...p, 
                         date: parseToStandardDateStr(p.date || p.timestamp) 
                     }));
+
+                    // รวมรายการ local ที่ยังไม่ซิงค์ลง Google Sheet
+                    const existingIds = new Set(fetchedPurchases.map(p => p.id));
+                    purchases.forEach(p => {
+                        if (!existingIds.has(p.id)) fetchedPurchases.push(p);
+                    });
+
+                    purchases = fetchedPurchases;
                     purchases.sort((a, b) => parseDMYToDateObj(b.date) - parseDMYToDateObj(a.date));
                 }
 
                 if (resData.adjustLogs && Array.isArray(resData.adjustLogs)) {
-                    adjustLogs = resData.adjustLogs.map(l => ({ ...l, date: parseToStandardDateStr(l.date || l.timestamp) }));
+                    const fetchedLogs = resData.adjustLogs.map(l => ({ ...l, date: parseToStandardDateStr(l.date || l.timestamp) }));
+
+                    const existingLogIds = new Set(fetchedLogs.map(l => l.id));
+                    adjustLogs.forEach(l => {
+                        if (!existingLogIds.has(l.id)) fetchedLogs.push(l);
+                    });
+
+                    adjustLogs = fetchedLogs;
                 }
 
                 const rawItems = Array.isArray(resData) ? resData : (resData.items || []);
@@ -476,7 +491,6 @@
                 if (showToastAlert) loadLocalOrDefaultData();
             }
 
-            // อัปเดตการแสดงผลในหน้าจอโดยคงวันที่ที่เลือกอยู่ไว้
             renderAllViews();
         }
 
@@ -512,7 +526,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ action, ...payloadData })
                 });
-                setTimeout(() => fetchDataFromGoogleSheet(false), 1200);
+                setTimeout(() => fetchDataFromGoogleSheet(false), 3000);
             } catch (err) { console.error(err); }
         }
 
@@ -650,8 +664,8 @@
 
                 let dotColorClass = '';
                 if (hasAdd && hasSub) dotColorClass = 'bg-amber-500';
-                else if (hasAdd) dotColorClass = 'bg-emerald-500'; // จุดเขียว = เติมสต๊อก
-                else if (hasSub) dotColorClass = 'bg-rose-500';    // จุดแดง = เบิกออก
+                else if (hasAdd) dotColorClass = 'bg-emerald-500';
+                else if (hasSub) dotColorClass = 'bg-rose-500';
 
                 let bgClass = 'bg-slate-50 text-slate-700';
                 if (isSelected) bgClass = 'bg-amber-500 text-slate-950 font-bold shadow-md';
@@ -695,7 +709,6 @@
             } else {
                 let html = '';
 
-                // รายการเติมสต๊อก (สีเขียว)
                 dayPurchases.forEach(p => {
                     html += `
                         <div class="p-2.5 bg-slate-800/80 rounded-2xl border border-emerald-900/60 flex justify-between items-center text-xs">
@@ -704,14 +717,13 @@
                                     <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
                                     ${escapeHtml(p.itemName)} <span class="text-[10px] text-slate-400 font-mono">(${escapeHtml(p.itemCode)})</span>
                                 </p>
-                                <p class="text-[10px] text-slate-400">เติมเข้า +${p.qty} | ต้นทุน: ฿${Number(p.unitCost).toFixed(2)} | เวลา/หมายเหตุ: ${escapeHtml(p.timestamp || p.supplier || '-')}</p>
+                                <p class="text-[10px] text-slate-400">เติมเข้า +${p.qty} | ต้นทุน: ฿${Number(p.unitCost).toFixed(2)} | หมายเหตุ: ${escapeHtml(p.supplier || '-')}</p>
                             </div>
                             <span class="font-bold text-emerald-400">฿${Number(p.total).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
                         </div>
                     `;
                 });
 
-                // รายการเบิกออก (สีแดง)
                 dayLogs.forEach(l => {
                     const isSub = l.type === 'SUB';
                     html += `
