@@ -339,7 +339,7 @@
     </div>
 
     <script>
-        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyBW817BKoOEYY-opyUkfaOeDyUxcZRSRypU3MZv_GP3ENX4rP0WHXj_fh9kOiIVIXIxg/exec';
+        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx659IjNpiwQdin4CiBGGlCjSoeG_52aMG6uF1XGFAEG6SAa7-Xxyita9uLTMbshIDlzQ/exec';
         let googleScriptUrl = DEFAULT_SCRIPT_URL;
 
         const OWNER_PASSWORD = '037cafe';
@@ -457,7 +457,7 @@
             return `${dateStr} ${hours}:${minutes}:${seconds}`;
         }
 
-        // ดึงข้อมูลตรงจาก Google Sheet และป้องกันการรีเซ็ทปฏิทิน
+        // ดึงข้อมูลตรงจาก Google Sheet และอัปเดตมุมมอง
         async function fetchDataFromGoogleSheet(showToastAlert = false) {
             if (!googleScriptUrl) return;
 
@@ -520,7 +520,6 @@
                 console.error('Fetch error:', err);
             }
 
-            // อัปเดตมุมมองโดยยังคงรักษาวันที่และเดือนที่กำลังเปิดดูอยู่ ไม่ให้ถูกรีเซ็ท
             renderAllViewsWithoutReset();
         }
 
@@ -556,8 +555,10 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ action, ...payloadData })
                 });
-                setTimeout(() => fetchDataFromGoogleSheet(false), 2000);
-            } catch (err) { console.error(err); }
+                setTimeout(() => fetchDataFromGoogleSheet(false), 5000);
+            } catch (err) { 
+                console.error(err); 
+            }
         }
 
         /* ------------------ ฟังก์ชันลบรายการ ------------------ */
@@ -907,19 +908,52 @@
             if (selectedAdjustType === 'ADD') {
                 item.stock += qty;
                 item.lastCost = unitCost;
-                purchases.unshift({ id: Date.now(), timestamp: nowDateTimeStr, date: todayDateStr, itemId: item.id, itemName: item.name, itemCode: item.code, unitCost: unitCost, qty: qty, unit: item.unit, total: qty * unitCost, supplier: reason });
+                purchases.unshift({ 
+                    id: Date.now(), 
+                    timestamp: nowDateTimeStr, 
+                    date: todayDateStr, 
+                    itemCode: item.code, 
+                    itemName: item.name, 
+                    unitCost: unitCost, 
+                    qty: qty, 
+                    unit: item.unit, 
+                    total: qty * unitCost, 
+                    supplier: reason 
+                });
             } else {
                 if (item.stock < qty) return alert('สต๊อกคงเหลือไม่พอสำหรับการเบิกออก');
                 item.stock -= qty;
-                adjustLogs.unshift({ id: Date.now(), timestamp: nowDateTimeStr, date: todayDateStr, itemId: item.id, itemName: item.name, itemCode: item.code, type: selectedAdjustType, qty: qty, unit: item.unit, reason: reason });
+                adjustLogs.unshift({ 
+                    id: Date.now(), 
+                    timestamp: nowDateTimeStr, 
+                    date: todayDateStr, 
+                    itemCode: item.code, 
+                    itemName: item.name, 
+                    type: selectedAdjustType, 
+                    qty: qty, 
+                    unit: item.unit, 
+                    reason: reason 
+                });
             }
 
             saveToLocalStorage();
             closeAdjustModal();
-            renderAllViewsWithoutReset();
+            
+            renderCalendarView();
+            showDayDetails(selectedDateStr);
+            renderInventoryTable();
+
             showToast(selectedAdjustType === 'ADD' ? 'เติมสต๊อกเรียบร้อย (สีเขียว)' : 'เบิกสต๊อกออกเรียบร้อย (สีแดง)');
 
-            syncItemToGoogleSheet('quickAdjust', { date: todayDateStr, code: item.code, name: item.name, type: selectedAdjustType, qty: qty, unitCost: unitCost, reason: reason });
+            syncItemToGoogleSheet('quickAdjust', { 
+                date: todayDateStr, 
+                code: item.code, 
+                name: item.name, 
+                type: selectedAdjustType, 
+                qty: qty, 
+                unitCost: unitCost, 
+                reason: reason 
+            });
         }
 
         /* ------------------ MANAGEMENT & RENDER ------------------ */
