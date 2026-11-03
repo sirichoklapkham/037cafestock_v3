@@ -304,7 +304,7 @@
     </div>
 
     <script>
-        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzcrQHAXFa0nAFi41pjxa9SCXzua8X3VYc5dLPCrAyapszi8H_7APy9wliPRE03NDAcUg/exec';
+        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzIi7Ju9gbd6TOU4tE9GTy2waeEkuCzsfSZQTQIYdqOKJbFJ5BgQ5W1uMEs4p51n6XiAw/exec';
         let googleScriptUrl = DEFAULT_SCRIPT_URL;
 
         const OWNER_PASSWORD = '037cafe';
@@ -319,6 +319,7 @@
         let adjustLogs = [];
         let autoSyncTimer = null;
         let isSyncing = false;
+        let isSubmitting = false; // ตัวแปรป้องกัน Auto-sync มาขัดจังหวะช่วงส่งข้อมูล
 
         let calendarCurrentDate = new Date();
         let selectedDateStr = getFormattedDate(); 
@@ -439,7 +440,7 @@
         }
 
         async function fetchDataFromGoogleSheet(showToastAlert = false) {
-            if (!googleScriptUrl || isSyncing) return;
+            if (!googleScriptUrl || isSyncing || isSubmitting) return;
 
             try {
                 if (showToastAlert) showToast('กำลังซิงค์ข้อมูลเรียลไทม์...');
@@ -538,12 +539,16 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ action, ...payloadData })
                 });
+                
+                // เว้นระยะให้ Google Sheet เพิ่มแถวลงชีทให้เรียบร้อย แล้วค่อยดึงข้อมูลใหม่
                 setTimeout(() => {
+                    isSubmitting = false;
                     isSyncing = false;
                     fetchDataFromGoogleSheet(false);
-                }, 2000);
+                }, 2500);
             } catch (err) { 
                 console.error(err); 
+                isSubmitting = false;
                 isSyncing = false;
             }
         }
@@ -862,10 +867,55 @@
             if (!item) return;
 
             const targetDateStr = selectedDateStr || getFormattedDate();
+            
+            // ตั้งค่าสถานะเพื่อระงับ Auto-sync ชั่วคราว
+            isSubmitting = true;
+
+            const now = new Date();
+            const hh = String(now.getHours()).padStart(2, '0');
+            const mm = String(now.getMinutes()).padStart(2, '0');
+            const ssVal = String(now.getSeconds()).padStart(2, '0');
+            const timeStr = `${hh}:${mm}:${ssVal}`;
+            const fullTimestampStr = `${targetDateStr} ${timeStr}`;
+
+            // 1. อัปเดตข้อมูลสินค้าใน Local ทันที (Optimistic UI)
+            if (selectedAdjustType === 'ADD') {
+                item.stock = Number(item.stock) + qty;
+                if (unitCost > 0) item.lastCost = unitCost;
+                
+                purchases.push({
+                    id: purchases.length + 1,
+                    date: targetDateStr,
+                    timestamp: fullTimestampStr,
+                    itemCode: item.code,
+                    itemName: item.name,
+                    qty: qty,
+                    unitCost: unitCost,
+                    total: qty * unitCost,
+                    supplier: reason
+                });
+            } else {
+                item.stock = Math.max(0, Number(item.stock) - qty);
+                
+                adjustLogs.push({
+                    id: adjustLogs.length + 1,
+                    date: targetDateStr,
+                    timestamp: fullTimestampStr,
+                    itemCode: item.code,
+                    itemName: item.name,
+                    type: 'SUB',
+                    qty: qty,
+                    reason: reason
+                });
+            }
+
+            saveToLocalStorage();
+            renderAllViewsWithoutReset();
 
             closeAdjustModal();
-            showToast('กำลังบันทึกลง Google Sheet...');
+            showToast('บันทึกลงปฏิทินสำเร็จ และกำลังส่งไป Google Sheet...');
 
+            // 2. ส่งข้อมูลไปยัง Google Sheet
             syncItemToGoogleSheet('quickAdjust', { 
                 date: targetDateStr, 
                 code: item.code, 
