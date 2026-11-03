@@ -323,7 +323,6 @@
             return String(str).toLowerCase().replace(/[\u0300-\u036f]/g, '').replace(/[่้๊๋็์ํ๎]/g, '').replace(/\s+/g, '');
         }
 
-        // แปลงรูปแบบวันที่ทุกชนิดให้เป็น DD/MM/YYYY
         function parseToStandardDateStr(dateInput) {
             if (!dateInput) return '';
             
@@ -344,11 +343,11 @@
                 const parts = str.split('-');
                 if (parts.length === 3) {
                     let d, m, y;
-                    if (parts[0].length === 4) { // YYYY-MM-DD
+                    if (parts[0].length === 4) {
                         y = parseInt(parts[0], 10);
                         m = parts[1].padStart(2, '0');
                         d = parts[2].padStart(2, '0');
-                    } else { // DD-MM-YYYY
+                    } else {
                         d = parts[0].padStart(2, '0');
                         m = parts[1].padStart(2, '0');
                         y = parseInt(parts[2], 10);
@@ -360,11 +359,11 @@
                 const parts = str.split('/');
                 if (parts.length === 3) {
                     let d, m, y;
-                    if (parts[2].length === 4) { // DD/MM/YYYY
+                    if (parts[2].length === 4) {
                         d = parts[0].padStart(2, '0');
                         m = parts[1].padStart(2, '0');
                         y = parseInt(parts[2], 10);
-                    } else if (parts[0].length === 4) { // YYYY/MM/DD
+                    } else if (parts[0].length === 4) {
                         y = parseInt(parts[0], 10);
                         m = parts[1].padStart(2, '0');
                         d = parts[2].padStart(2, '0');
@@ -433,9 +432,23 @@
             return parseToStandardDateStr(d);
         }
 
+        // ระบบรวมข้อมูลแบบ Smart Merge ป้องกันข้อมูลหาย
+        function mergeArraysUnique(localArr, remoteArr) {
+            const map = new Map();
+            remoteArr.forEach(item => {
+                const key = (item.timestamp || item.date) + '_' + (item.itemCode || item.code) + '_' + (item.qty || 0);
+                map.set(key, item);
+            });
+            localArr.forEach(item => {
+                const key = (item.timestamp || item.date) + '_' + (item.itemCode || item.code) + '_' + (item.qty || 0);
+                if (!map.has(key)) {
+                    map.set(key, item);
+                }
+            });
+            return Array.from(map.values());
+        }
+
         async function fetchDataFromGoogleSheet(showToastAlert = false, forceManual = false) {
-            // ป้องกัน Auto-Sync ทับหน้าปฏิทิน
-            if (!forceManual && activeTabId === 'calendar') return;
             if (!googleScriptUrl || isSyncing || isSubmitting) return;
 
             try {
@@ -448,19 +461,21 @@
                 if (resData.categories && Array.isArray(resData.categories)) categories = resData.categories;
 
                 if (resData.purchases && Array.isArray(resData.purchases)) {
-                    purchases = resData.purchases.map(p => ({ 
+                    const remotePurchases = resData.purchases.map(p => ({ 
                         ...p, 
                         date: parseToStandardDateStr(p.date),
                         timestamp: p.timestamp || p.date
                     }));
+                    purchases = mergeArraysUnique(purchases, remotePurchases);
                 }
 
                 if (resData.adjustLogs && Array.isArray(resData.adjustLogs)) {
-                    adjustLogs = resData.adjustLogs.map(l => ({ 
+                    const remoteAdjustLogs = resData.adjustLogs.map(l => ({ 
                         ...l, 
                         date: parseToStandardDateStr(l.date),
                         timestamp: l.timestamp || l.date
                     }));
+                    adjustLogs = mergeArraysUnique(adjustLogs, remoteAdjustLogs);
                 }
 
                 const rawItems = Array.isArray(resData) ? resData : (resData.items || []);
@@ -490,9 +505,9 @@
                             orderedNote: String(row.orderedNote || row['หมายเหตุสั่งซื้อ'] || '')
                         };
                     });
-                    saveToLocalStorage();
                 }
                 
+                saveToLocalStorage();
                 if (showToastAlert) showToast('ซิงค์ข้อมูลเรียบร้อยแล้ว');
             } catch (err) {
                 console.error('Fetch error:', err);
@@ -505,11 +520,8 @@
         function startAutoSync() {
             if (autoSyncTimer) clearInterval(autoSyncTimer);
             autoSyncTimer = setInterval(() => {
-                // ปิดการเรียก Auto-Sync เมื่อเปิดหน้าปฏิทินอยู่
-                if (activeTabId !== 'calendar') {
-                    fetchDataFromGoogleSheet(false, false);
-                }
-            }, 5000);
+                fetchDataFromGoogleSheet(false, false);
+            }, 8000);
         }
 
         function stopAutoSync() {
@@ -543,10 +555,8 @@
                 setTimeout(async () => {
                     isSubmitting = false;
                     isSyncing = false;
-                    if (activeTabId !== 'calendar') {
-                        await fetchDataFromGoogleSheet(false, false);
-                    }
-                }, 2000);
+                    await fetchDataFromGoogleSheet(false, true);
+                }, 1500);
             } catch (err) { 
                 console.error(err); 
                 isSubmitting = false;
@@ -577,8 +587,6 @@
             if (tabId === 'calendar') {
                 renderCalendarView();
                 showDayDetails(selectedDateStr);
-            } else {
-                fetchDataFromGoogleSheet(false, false);
             }
 
             if (tabId === 'inventory') renderInventoryTable();
@@ -871,8 +879,6 @@
             if (!item) return;
 
             const targetDateStr = selectedDateStr || getFormattedDate();
-            
-            // ล็อกระบบ Auto-sync
             isSubmitting = true;
 
             const now = new Date();
@@ -1063,7 +1069,7 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             loadLocalOrDefaultData();
-            // โหลดข้อมูลจาก Google Sheet ครั้งแรกเมื่อเปิดหน้าเว็บ
+            renderAllViewsWithoutReset();
             fetchDataFromGoogleSheet(false, true);
             startAutoSync();
         });
