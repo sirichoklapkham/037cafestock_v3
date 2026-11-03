@@ -110,7 +110,7 @@
         <section id="tab-calendar" class="tab-content space-y-4">
             <div class="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
                 <div class="flex items-center justify-between px-1">
-                    <h3 id="calendar-month-year" class="font-bold text-slate-800 text-base">พฤศจิกายน 2569</h3>
+                    <h3 id="calendar-month-year" class="font-bold text-slate-800 text-base">พฤศจิกายน 2026</h3>
                     <div class="flex items-center space-x-1">
                         <button onclick="changeCalendarMonth(-1)" class="w-7 h-7 bg-slate-100 hover:bg-slate-200 rounded-full flex items-center justify-center text-slate-600 text-xs"><i class="fa-solid fa-chevron-left"></i></button>
                         <button onclick="changeCalendarMonth(1)" class="w-7 h-7 bg-slate-100 hover:bg-slate-200 rounded-full flex items-center justify-center text-slate-600 text-xs"><i class="fa-solid fa-chevron-right"></i></button>
@@ -299,7 +299,7 @@
     </div>
 
     <script>
-        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyg2zMEewlTPGHjknI6WDuf1J4dlMlQGu1epCiKwIfQVZNRUTTpX6QAYQL3c6RrExylOw/exec';
+        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzMl3kqE8Woa8Qnlzc4aTZ3Z-9CWUagwThPCND284iwoYIyja7DDbcAZhaW3g23eurqkA/exec';
         let googleScriptUrl = DEFAULT_SCRIPT_URL;
 
         const OWNER_PASSWORD = '037cafe';
@@ -574,7 +574,8 @@
             const month = calendarCurrentDate.getMonth();
 
             const monthNamesTH = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
-            title.innerText = `${monthNamesTH[month]} ${year + 543}`;
+            // แก้ไขแสดงปี ค.ศ. (2026) โดยตรง
+            title.innerText = `${monthNamesTH[month]} ${year}`;
 
             const firstDay = new Date(year, month, 1).getDay();
             const daysInMonth = new Date(year, month + 1, 0).getDate();
