@@ -299,7 +299,7 @@
     </div>
 
     <script>
-        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzMl3kqE8Woa8Qnlzc4aTZ3Z-9CWUagwThPCND284iwoYIyja7DDbcAZhaW3g23eurqkA/exec';
+        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzup-IMAgTPWUMu-jNaNHuib-hyRbMFKgz7V0X99aHql9fhQH0eIKVXzMFRTXqse1h26g/exec';
         let googleScriptUrl = DEFAULT_SCRIPT_URL;
 
         const OWNER_PASSWORD = '037cafe';
@@ -574,7 +574,7 @@
             const month = calendarCurrentDate.getMonth();
 
             const monthNamesTH = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
-            // แก้ไขแสดงปี ค.ศ. (2026) โดยตรง
+            // แสดงปี ค.ศ. (2026) โดยตรง
             title.innerText = `${monthNamesTH[month]} ${year}`;
 
             const firstDay = new Date(year, month, 1).getDay();
@@ -657,8 +657,16 @@
 
             if (!dateTitle || !itemsList) return;
 
-            const dayPurchases = purchases.filter(p => parseToStandardDateStr(p.date || p.timestamp) === selectedDateStr);
-            const dayLogs = adjustLogs.filter(l => parseToStandardDateStr(l.date || l.timestamp) === selectedDateStr);
+            // กรองรายการซื้อและรายการปรับสต๊อกโดยเปรียบเทียบจากวันที่มาตรฐาน
+            const dayPurchases = purchases.filter(p => {
+                const stdP = parseToStandardDateStr(p.date || p.timestamp);
+                return stdP === selectedDateStr;
+            });
+            
+            const dayLogs = adjustLogs.filter(l => {
+                const stdL = parseToStandardDateStr(l.date || l.timestamp);
+                return stdL === selectedDateStr;
+            });
 
             const totalSum = dayPurchases.reduce((sum, p) => sum + Number(p.total || 0), 0);
 
@@ -673,8 +681,8 @@
                     logType: 'PURCHASE',
                     timeMs: parseDateTimeToTimestamp(p.timestamp || p.date),
                     timestampStr: p.timestamp || p.date,
-                    itemName: p.itemName,
-                    itemCode: p.itemCode,
+                    itemName: p.itemName || p.itemCode || 'สินค้า',
+                    itemCode: p.itemCode || '',
                     qty: p.qty,
                     unitCost: p.unitCost,
                     total: p.total,
@@ -687,8 +695,8 @@
                     logType: l.type,
                     timeMs: parseDateTimeToTimestamp(l.timestamp || l.date),
                     timestampStr: l.timestamp || l.date,
-                    itemName: l.itemName,
-                    itemCode: l.itemCode,
+                    itemName: l.itemName || l.itemCode || 'สินค้า',
+                    itemCode: l.itemCode || '',
                     qty: l.qty,
                     unitCost: 0,
                     total: 0,
@@ -696,7 +704,6 @@
                 });
             });
 
-            // เรียงจากเวลาล่าสุดไปหาเวลาเก่าที่สุด
             combinedList.sort((a, b) => b.timeMs - a.timeMs);
 
             if (combinedList.length === 0) {
@@ -730,7 +737,6 @@
                         </div>
                     `;
                 });
-
                 itemsList.innerHTML = html;
             }
 
