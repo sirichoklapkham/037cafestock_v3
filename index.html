@@ -299,7 +299,7 @@
     </div>
 
     <script>
-        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyD83WhwN-8_Doaj0uvCz1aOg6TDfvCNMHpfSeR-YhFnKCpqc40g3vT_l8F3al9R08y8g/exec';
+        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyVEP0_9OXqCjBqgiJF5OxxTltnh4ZcubvipdQcdEhx7d11bbexRdUTL3kNbL4-sXfg/exec';
         let googleScriptUrl = DEFAULT_SCRIPT_URL;
 
         const OWNER_PASSWORD = '037cafe';
@@ -426,7 +426,7 @@
             return `${dateStr} ${hours}:${minutes}:${seconds}`;
         }
 
-        // ดึงข้อมูล Realtime และนำมา Merge รวมกับ local เสมอ
+        // ดึงข้อมูล Realtime และอัปเดตตรงเข้า Local Storage
         async function fetchDataFromGoogleSheet(showToastAlert = false) {
             if (!googleScriptUrl || isSyncing) return;
 
@@ -492,7 +492,7 @@
             renderAllViewsWithoutReset();
         }
 
-        // ระบบ Auto-Sync สั่งทำงานตลอดเวลาแม้จะสลับโหมด
+        // ระบบ Auto-Sync สั่งทำงานตลอดเวลาทุกๆ 4 วินาที
         function startAutoSync() {
             if (autoSyncTimer) clearInterval(autoSyncTimer);
             autoSyncTimer = setInterval(() => fetchDataFromGoogleSheet(false), 4000);
