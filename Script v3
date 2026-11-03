@@ -1,0 +1,322 @@
+const LINE_ACCESS_TOKEN = "06i2ACLPJCMskEzlhbhr2KyDvENhq+z8bV9cnz2FW00klD3ymzHZGcKePU6qghUi28UIzhai94wU8hAsVAUjIf16YyvGFSjgw06lIbwsW2yAXFFbscG2vKOA3DZq6qtfmq75EL6Hbiz7inC760g4UQdB04t89/1O/w1cDnyilFU=";
+const USER_ID = "U555c6695bdf42a12893d67491117f0e6";
+
+function sendLinePushMessage(messageText) {
+  if (!LINE_ACCESS_TOKEN || !USER_ID) return false;
+  
+  const url = "https://api.line.me/v2/bot/message/push";
+  const payload = {
+    to: USER_ID,
+    messages: [{ type: "text", text: messageText }]
+  };
+
+  const options = {
+    method: "post",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + LINE_ACCESS_TOKEN
+    },
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
+
+  try {
+    const response = UrlFetchApp.fetch(url, options);
+    return response.getResponseCode() === 200;
+  } catch (err) {
+    Logger.log("LINE Error: " + err.toString());
+    return false;
+  }
+}
+
+function getOrCreatePurchaseSheet(ss) {
+  let pSheet = ss.getSheetByName("PurchaseHistory");
+  if (!pSheet) {
+    pSheet = ss.insertSheet("PurchaseHistory");
+    pSheet.appendRow(["Date", "Code", "Name", "Qty", "UnitCost", "Total", "Supplier"]);
+    pSheet.getRange(1, 1, 1, 7).setFontWeight("bold");
+  }
+  return pSheet;
+}
+
+// ฟังก์ชันแปลงวันที่ให้เป็นรูปแบบ DD/MM/YYYY
+function formatDateToDMY(dateInput) {
+  if (!dateInput) return "";
+  if (dateInput instanceof Date) {
+    return Utilities.formatDate(dateInput, Session.getScriptTimeZone(), "dd/MM/yyyy");
+  }
+  let str = String(dateInput).trim();
+  if (str.includes("T")) str = str.split("T")[0];
+  
+  // กรณีเป็น YYYY-MM-DD
+  if (str.includes("-")) {
+    const parts = str.split("-");
+    if (parts.length === 3 && parts[0].length === 4) {
+      return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
+    }
+  }
+  return str;
+}
+
+function doGet(e) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getActiveSheet();
+    const data = sheet.getDataRange().getValues();
+
+    const rows = data.length > 1 ? data.slice(1) : [];
+    var categoriesSet = new Set();
+    const items = [];
+
+    rows.forEach(function(row, index) {
+      const code = String(row[0] || '').trim();
+      const name = String(row[1] || '').trim();
+      
+      if (code || name) {
+        const catName = String(row[5] || '').trim() || 'ทั่วไป';
+        categoriesSet.add(catName);
+
+        const rawIsOrdered = row[7];
+        const isOrderedBool = (rawIsOrdered === true || String(rawIsOrdered).toUpperCase() === 'TRUE');
+
+        items.push({
+          id: index + 1,
+          code: code,
+          name: name,
+          stock: Number(row[2]) || 0,
+          minAlert: Number(row[3]) || 0,
+          unit: String(row[4] || 'ชิ้น').trim(),
+          categoryName: catName,
+          lastCost: Number(row[6]) || 0,
+          isOrdered: isOrderedBool,
+          orderedQty: Number(row[8]) || 0,
+          orderedNote: String(row[9] || '').trim()
+        });
+      }
+    });
+
+    var categories = Array.from(categoriesSet).map(function(catName, index) {
+      return { id: index + 1, name: catName };
+    });
+
+    // อ่านข้อมูลชีท PurchaseHistory และแปลงวันที่เป็น DD/MM/YYYY
+    const pSheet = getOrCreatePurchaseSheet(ss);
+    const pData = pSheet.getDataRange().getValues();
+    const purchases = [];
+
+    if (pData.length > 1) {
+      const pRows = pData.slice(1);
+      pRows.forEach(function(pRow, pIdx) {
+        if (pRow[0]) {
+          const formattedDate = formatDateToDMY(pRow[0]);
+
+          purchases.push({
+            id: pIdx + 1,
+            date: formattedDate,
+            itemCode: String(pRow[1] || ''),
+            itemName: String(pRow[2] || ''),
+            qty: Number(pRow[3]) || 0,
+            unitCost: Number(pRow[4]) || 0,
+            total: Number(pRow[5]) || (Number(pRow[3]) * Number(pRow[4])) || 0,
+            supplier: String(pRow[6] || '')
+          });
+        }
+      });
+    }
+
+    const response = {
+      items: items,
+      categories: categories,
+      purchases: purchases
+    };
+    
+    return ContentService.createTextOutput(JSON.stringify(response))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ status: "error", message: err.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function doPost(e) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getActiveSheet();
+    const contents = e.postData.contents;
+    const data = JSON.parse(contents);
+    const action = data.action || 'saveItem';
+
+    if (action === 'checkLowStockSummary') {
+      SpreadsheetApp.flush();
+      const rows = sheet.getDataRange().getValues();
+      const needOrderItems = [];
+      const orderedItems = [];
+
+      for (let i = 1; i < rows.length; i++) {
+        const code = String(rows[i][0] || '').trim();
+        const name = String(rows[i][1] || '').trim();
+        const stock = Number(rows[i][2]);
+        const minAlert = Number(rows[i][3]);
+        const unit = String(rows[i][4] || 'ชิ้น').trim();
+        const rawIsOrdered = rows[i][7];
+        const isOrderedBool = (rawIsOrdered === true || String(rawIsOrdered).toUpperCase() === 'TRUE');
+        const orderedQty = Number(rows[i][8]) || 0;
+
+        if (name !== '' && !isNaN(stock) && !isNaN(minAlert) && minAlert > 0 && stock <= minAlert) {
+          const itemObj = { code, name, stock, minAlert, unit, orderedQty };
+          if (isOrderedBool) orderedItems.push(itemObj);
+          else needOrderItems.push(itemObj);
+        }
+      }
+
+      if (needOrderItems.length === 0 && orderedItems.length === 0) {
+        sendLinePushMessage(`✅ [รายงานสต๊อกสินค้า]\nขณะนี้ไม่มีรายการสินค้าที่สต๊อกต่ำกว่าเกณฑ์ครับ!`);
+        return ContentService.createTextOutput(JSON.stringify({ status: "success", message: "ไม่มีสินค้าสต๊อกต่ำ" })).setMimeType(ContentService.MimeType.JSON);
+      }
+
+      let msg = `🚨 [รายงานสรุปรายการสินค้าสต๊อกต่ำ]\n`;
+      msg += `พบรายการสต๊อกต่ำทั้งหมด: ${needOrderItems.length + orderedItems.length} รายการ\n`;
+      msg += `============================\n`;
+
+      if (needOrderItems.length > 0) {
+        msg += `📌 [ยังไม่ได้สั่งซื้อ - ต้องสั่งด่วน! (${needOrderItems.length} รายการ)]\n`;
+        needOrderItems.forEach((item, index) => {
+          msg += `${index + 1}. ${item.name} (${item.code})\n`;
+          msg += `   📦 คงเหลือ: ${item.stock} ${item.unit} (ขั้นต่ำ: ${item.minAlert} ${item.unit})\n`;
+        });
+        msg += `============================\n`;
+      }
+
+      if (orderedItems.length > 0) {
+        msg += `🚚 [สั่งซื้อแล้ว - รอสินค้ามาส่ง (${orderedItems.length} รายการ)]\n`;
+        orderedItems.forEach((item, index) => {
+          msg += `${index + 1}. ${item.name} (${item.code})\n`;
+          msg += `   📦 คงเหลือ: ${item.stock} ${item.unit} | 🛒 สั่งแล้ว: ${item.orderedQty} ${item.unit}\n`;
+        });
+      }
+
+      const success = sendLinePushMessage(msg);
+      return ContentService.createTextOutput(JSON.stringify({ status: success ? "success" : "error" })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (action === 'purchase') {
+      const rawDate = data.date || Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy");
+      const dateVal = formatDateToDMY(rawDate);
+      const code = String(data.code || '').trim();
+      const qty = Number(data.qty) || 0;
+      const unitCost = Number(data.unitCost) || 0;
+      const total = qty * unitCost;
+      const supplier = data.supplier || '-';
+
+      const rows = sheet.getDataRange().getValues();
+      let foundIndex = -1;
+      let currentStock = 0;
+      let itemObj = null;
+
+      for (let i = 1; i < rows.length; i++) {
+        if (String(rows[i][0]).trim() === code) {
+          foundIndex = i + 1;
+          currentStock = Number(rows[i][2]) || 0;
+          itemObj = {
+            name: String(data.name || rows[i][1] || '').trim(),
+            code: code,
+            minAlert: Number(rows[i][3]) || 0,
+            unit: String(rows[i][4] || 'ชิ้น').trim()
+          };
+          break;
+        }
+      }
+
+      if (foundIndex > 0 && itemObj) {
+        let newStock = currentStock + qty;
+        sheet.getRange(foundIndex, 3).setValue(newStock);
+        sheet.getRange(foundIndex, 7).setValue(unitCost);
+
+        if (newStock > itemObj.minAlert) {
+          sheet.getRange(foundIndex, 8).setValue(false);
+          sheet.getRange(foundIndex, 9).setValue(0);
+          sheet.getRange(foundIndex, 10).setValue('');
+        }
+
+        // บันทึกลงชีท PurchaseHistory เป็นรูปแบบ DD/MM/YYYY
+        const pSheet = getOrCreatePurchaseSheet(ss);
+        pSheet.appendRow([dateVal, code, itemObj.name, qty, unitCost, total, supplier]);
+
+        let msg = `🛒 [บันทึกการซื้อสินค้าเข้า]\n`;
+        msg += `วันที่: ${dateVal}\n`;
+        msg += `สินค้า: ${itemObj.name} (${itemObj.code})\n`;
+        msg += `รับเข้า: +${qty} ${itemObj.unit}\n`;
+        msg += `ต้นทุนล่าสุด: ฿${unitCost}\n`;
+        msg += `ราคารวม: ฿${total}\n`;
+        msg += `ผู้ขาย/หมายเหตุ: ${supplier}`;
+
+        sendLinePushMessage(msg);
+        return ContentService.createTextOutput(JSON.stringify({ status: "success" })).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
+    if (action === 'quickAdjust') {
+      const code = String(data.code || '').trim();
+      const adjustType = data.type;
+      const qty = Number(data.qty) || 0;
+      const reason = data.reason || 'เติมสต๊อกด่วน';
+      const rawDate = data.date || Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy");
+      const dateVal = formatDateToDMY(rawDate);
+
+      const rows = sheet.getDataRange().getValues();
+      let foundIndex = -1;
+      let currentStock = 0;
+      let unitCost = 0;
+      let itemObj = null;
+
+      for (let i = 1; i < rows.length; i++) {
+        if (String(rows[i][0]).trim() === code) {
+          foundIndex = i + 1;
+          currentStock = Number(rows[i][2]) || 0;
+          unitCost = Number(rows[i][6]) || 0;
+          itemObj = {
+            name: String(data.name || rows[i][1] || '').trim(),
+            code: code,
+            minAlert: Number(rows[i][3]) || 0,
+            unit: String(rows[i][4] || 'ชิ้น').trim()
+          };
+          break;
+        }
+      }
+
+      if (foundIndex > 0 && itemObj) {
+        let newStock = adjustType === 'ADD' ? currentStock + qty : currentStock - qty;
+        if (newStock < 0) newStock = 0;
+        sheet.getRange(foundIndex, 3).setValue(newStock);
+
+        if (newStock > itemObj.minAlert) {
+          sheet.getRange(foundIndex, 8).setValue(false);
+          sheet.getRange(foundIndex, 9).setValue(0);
+          sheet.getRange(foundIndex, 10).setValue('');
+        }
+
+        // บันทึกลงชีท PurchaseHistory
+        if (adjustType === 'ADD') {
+          const pSheet = getOrCreatePurchaseSheet(ss);
+          const totalCost = qty * unitCost;
+          pSheet.appendRow([dateVal, code, itemObj.name, qty, unitCost, totalCost, `เติมสต๊อกด่วน (${reason})`]);
+        }
+
+        let msg = `🔄 [ปรับปรุงสต๊อกด่วน - ${adjustType === 'ADD' ? 'รับเข้า' : 'เบิกออก'}]\n`;
+        msg += `วันที่: ${dateVal}\n`;
+        msg += `สินค้า: ${itemObj.name} (${itemObj.code})\n`;
+        msg += `จำนวนที่ปรับ: ${adjustType === 'ADD' ? '+' : '-'}${qty} ${itemObj.unit}\n`;
+        msg += `คงเหลือใหม่: ${currentStock} ➔ ${newStock} ${itemObj.unit}\n`;
+        msg += `เหตุผล: ${reason}\n`;
+
+        sendLinePushMessage(msg);
+        return ContentService.createTextOutput(JSON.stringify({ status: "success" })).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({ status: "error", message: "Unknown action" })).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ status: "error", message: err.toString() })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
