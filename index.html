@@ -589,6 +589,7 @@
             const dailyTotals = {};
             const dailyHasAdd = {};
             const dailyHasSub = {};
+            const dailyHasExpense = {};
 
             purchases.forEach(p => {
                 const pDateStr = parseToStandardDateStr(p.date || p.timestamp);
@@ -598,6 +599,7 @@
                         const d = pDateObj.getDate();
                         dailyTotals[d] = (dailyTotals[d] || 0) + Number(p.total || 0);
                         dailyHasAdd[d] = true;
+                        dailyHasExpense[d] = true;
                     }
                 }
             });
@@ -609,7 +611,10 @@
                     if (lDateObj && lDateObj.getFullYear() === year && lDateObj.getMonth() === month) {
                         const d = lDateObj.getDate();
                         if (l.type === 'SUB') dailyHasSub[d] = true;
-                        else if (l.type === 'ADD') dailyHasAdd[d] = true;
+                        else if (l.type === 'ADD') {
+                            dailyHasAdd[d] = true;
+                            dailyHasExpense[d] = true;
+                        }
                     }
                 }
             });
@@ -629,6 +634,7 @@
 
                 const hasAdd = Boolean(dailyHasAdd[d]);
                 const hasSub = Boolean(dailyHasSub[d]);
+                const hasExpense = Boolean(dailyHasExpense[d]);
 
                 let dotColorClass = '';
                 if (hasAdd && hasSub) dotColorClass = 'bg-amber-500';
@@ -640,8 +646,9 @@
                 else if (isToday) bgClass = 'bg-amber-100 text-amber-900 border border-amber-300';
 
                 html += `
-                    <div onclick="selectCalendarDate('${dateStr}')" class="p-1.5 min-h-[50px] rounded-2xl ${bgClass} transition cursor-pointer flex flex-col justify-between items-center">
-                        <span class="text-xs font-semibold">${d}</span>
+                    <div onclick="selectCalendarDate('${dateStr}')" class="p-1.5 min-h-[50px] rounded-2xl ${bgClass} transition cursor-pointer flex flex-col justify-between items-center relative">
+                        ${hasExpense ? `<span class="absolute top-0.5 left-1 text-[9px] leading-none" title="วันที่มีรายจ่ายสต๊อก">💰</span>` : ''}
+                        <span class="text-xs font-semibold ${hasExpense ? 'ml-auto' : ''}">${d}</span>
                         ${(hasAdd || hasSub) ? `
                             <span class="w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-slate-950' : dotColorClass}"></span>
                         ` : '<span class="text-[9px] text-slate-300">-</span>'}
