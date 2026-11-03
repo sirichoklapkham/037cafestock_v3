@@ -245,9 +245,15 @@
         </div>
     </nav>
 
-    <!-- QUICK ADJUSTMENT MODAL -->
-    <div id="quick-adjust-modal" class="fixed inset-0 modal-backdrop z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-xs w-full p-5 shadow-xl space-y-3">
+    <!-- QUICK ADJUSTMENT MODAL (เพิ่มการรองรับ Backdrop Click เพื่อปิด) -->
+    <div id="quick-adjust-modal" onclick="onModalBackdropClick(event)" class="fixed inset-0 modal-backdrop z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-xs w-full p-5 shadow-xl space-y-3 relative">
+            
+            <!-- ปุ่มปิดมุมขวาบน (X) -->
+            <button type="button" onclick="closeAdjustModal()" class="absolute top-3 right-3 text-slate-400 hover:text-slate-600 w-7 h-7 rounded-full flex items-center justify-center">
+                <i class="fa-solid fa-xmark text-base"></i>
+            </button>
+
             <h3 class="font-bold text-slate-800 text-sm" id="adjust-modal-title">ปรับสต๊อกด่วน</h3>
             
             <div class="space-y-2.5 text-xs">
@@ -287,14 +293,14 @@
             </div>
 
             <div class="flex justify-end gap-2 pt-2">
-                <button type="button" onclick="closeAdjustModal()" class="px-3 py-1.5 text-xs text-slate-500">ยกเลิก</button>
-                <button type="button" onclick="submitQuickAdjust()" class="bg-amber-500 text-slate-950 font-bold px-4 py-1.5 text-xs rounded-xl">บันทึก</button>
+                <button type="button" onclick="closeAdjustModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs rounded-xl">ยกเลิก</button>
+                <button type="button" onclick="submitQuickAdjust()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-4 py-2 text-xs rounded-xl shadow-xs">บันทึก</button>
             </div>
         </div>
     </div>
 
     <!-- TOAST NOTIFICATION -->
-    <div id="toast" class="fixed bottom-16 left-1/2 transform -translate-x-1/2 z-50 opacity-0 transition-all duration-300 bg-slate-900 text-amber-400 px-4 py-2.5 rounded-full shadow-lg text-xs font-semibold flex items-center space-x-2">
+    <div id="toast" class="fixed bottom-16 left-1/2 transform -translate-x-1/2 z-50 opacity-0 transition-all duration-300 bg-slate-900 text-amber-400 px-4 py-2.5 rounded-full shadow-lg text-xs font-semibold flex items-center space-x-2 pointer-events-none">
         <i id="toast-icon" class="fa-solid fa-circle-check"></i>
         <span id="toast-message">ทำรายการสำเร็จ</span>
     </div>
@@ -760,7 +766,7 @@
             }
         }
 
-        /* ------------------ QUICK ADJUSTMENT ------------------ */
+        /* ------------------ QUICK ADJUSTMENT & MODAL CLOSE HANDLERS ------------------ */
         function triggerQuickAddModal() { openQuickAdjustModalWithMode('ADD'); }
         function triggerQuickSubModal() { openQuickAdjustModalWithMode('SUB'); }
 
@@ -776,6 +782,21 @@
             document.getElementById('adjust-reason').value = '';
             document.getElementById('quick-adjust-modal').classList.remove('hidden');
         }
+
+        function closeAdjustModal() {
+            const modal = document.getElementById('quick-adjust-modal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function onModalBackdropClick(event) {
+            if (event.target.id === 'quick-adjust-modal') {
+                closeAdjustModal();
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeAdjustModal();
+        });
 
         function onAdjustItemChange() {
             const itemId = Number(document.getElementById('adjust-select-item').value);
@@ -816,8 +837,6 @@
                 totalBox.classList.add('hidden');
             }
         }
-
-        function closeAdjustModal() { document.getElementById('quick-adjust-modal').classList.add('hidden'); }
 
         function submitQuickAdjust() {
             const itemId = Number(document.getElementById('adjust-select-item').value);
