@@ -1,0 +1,1236 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>037Cafe - POS & Stock Audit</title>
+
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#111827">
+
+    <link rel="apple-touch-icon" sizes="180x180" href="https://drive.google.com/thumbnail?id=1UTeeGot9RJL-NB4NjdgK35m7UeQIL-fe&sz=w512">
+    <link rel="icon" type="image/png" href="https://drive.google.com/thumbnail?id=1UTeeGot9RJL-NB4NjdgK35m7UeQIL-fe&sz=w512">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts (Prompt) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            dark: '#111827',
+                            cardDark: '#1F2937',
+                            accent: '#F59E0B',
+                            accentLight: '#FBBF24',
+                            emerald: '#10B981',
+                            rose: '#EF4444'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Prompt', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Prompt', sans-serif;
+            background-color: #F3F4F6;
+            color: #1F2937;
+            -webkit-tap-highlight-color: transparent;
+        }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: #F1F5F9; }
+        ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
+        .modal-backdrop { background-color: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px); }
+        
+        .dark-card-gradient {
+            background: linear-gradient(145deg, #1F2937 0%, #111827 100%);
+        }
+
+        .pb-safe {
+            padding-bottom: env(safe-area-inset-bottom, 1rem);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased pb-24">
+
+    <!-- Top Header Bar (Dark Style ตามภาพ) -->
+    <header class="bg-[#111827] text-white px-4 py-3 sticky top-0 z-30 shadow-md">
+        <div class="max-w-md mx-auto flex items-center justify-between">
+            <div class="flex items-center space-x-2.5">
+                <img src="https://drive.google.com/thumbnail?id=1UTeeGot9RJL-NB4NjdgK35m7UeQIL-fe&sz=w512" alt="Logo" class="w-8 h-8 rounded-full border border-slate-700 object-cover">
+                <div>
+                    <h1 class="font-bold text-sm leading-tight text-white flex items-center gap-1">
+                        037Cafe
+                    </h1>
+                    <p class="text-[10px] text-amber-400 font-medium">POS & Expense Audit</p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-2">
+                <button onclick="fetchDataFromGoogleSheet(true)" class="bg-emerald-900/50 border border-emerald-600/50 text-emerald-300 px-2.5 py-1 rounded-lg text-[11px] font-medium flex items-center gap-1 hover:bg-emerald-800/50 transition">
+                    <i class="fa-solid fa-file-excel text-emerald-400"></i>
+                    <span>โหลด Sheet</span>
+                </button>
+                
+                <select id="role-selector" onchange="handleRoleSelect(this.value)" class="bg-amber-500 text-slate-950 font-bold text-[11px] px-2.5 py-1 rounded-lg outline-none cursor-pointer">
+                    <option value="STAFF">พนักงาน</option>
+                    <option value="OWNER">เจ้าของร้าน</option>
+                </select>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="max-w-md w-full mx-auto p-4 space-y-4 flex-1">
+
+        <!-- Banner แจ้งเตือนสต๊อกต่ำ -->
+        <div id="low-stock-banner" class="hidden bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3 flex items-center justify-between text-xs text-amber-800">
+            <div class="flex items-center space-x-2">
+                <i class="fa-solid fa-triangle-exclamation text-amber-500 text-base"></i>
+                <div>
+                    <p class="font-bold">สินค้าสต๊อกต่ำกว่ากำหนด!</p>
+                    <p id="low-stock-banner-text" class="text-[11px] text-slate-600">มี 0 รายการที่ต้องเติม</p>
+                </div>
+            </div>
+            <button onclick="sendLowStockToLine()" class="owner-col hidden px-3 py-1.5 bg-emerald-600 text-white font-semibold rounded-xl text-[11px]">LINE</button>
+        </div>
+
+        <!-- 1. CALENDAR TAB (หน้าหลักปฏิทินยอดลงของ) -->
+        <section id="tab-calendar" class="tab-content space-y-4">
+            <!-- ปฏิทินแบบ Minimal Modern -->
+            <div class="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
+                <div class="flex items-center justify-between px-1">
+                    <h3 id="calendar-month-year" class="font-bold text-slate-800 text-base">พฤศจิกายน 2026</h3>
+                    <div class="flex items-center space-x-1">
+                        <button onclick="changeCalendarMonth(-1)" class="w-7 h-7 bg-slate-100 hover:bg-slate-200 rounded-full flex items-center justify-center text-slate-600 text-xs"><i class="fa-solid fa-chevron-left"></i></button>
+                        <button onclick="changeCalendarMonth(1)" class="w-7 h-7 bg-slate-100 hover:bg-slate-200 rounded-full flex items-center justify-center text-slate-600 text-xs"><i class="fa-solid fa-chevron-right"></i></button>
+                        <button onclick="resetCalendarToCurrent()" class="px-2.5 py-1 bg-slate-900 text-amber-400 text-[10px] font-semibold rounded-lg ml-1">วันนี้</button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-7 gap-1 text-center text-[11px] font-medium text-slate-400">
+                    <div class="text-rose-500">อา</div>
+                    <div>จ</div>
+                    <div>อ</div>
+                    <div>พ</div>
+                    <div>พฤ</div>
+                    <div>ศ</div>
+                    <div class="text-amber-500">ส</div>
+                </div>
+                
+                <div id="calendar-grid" class="grid grid-cols-7 gap-1.5 text-xs"></div>
+            </div>
+
+            <!-- ชิปสถานะ -->
+            <div class="bg-emerald-50 border border-emerald-200/60 rounded-2xl p-3 flex items-center justify-between text-emerald-800 text-xs font-medium shadow-xs">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-regular fa-circle-check text-emerald-500 text-base"></i>
+                    <span id="calendar-status-chip">ยอดซื้อ-เติมสต๊อกประจำวันอัปเดตเรียบร้อย</span>
+                </div>
+                <button onclick="exportPurchasesCSV()" class="owner-col hidden text-[11px] bg-emerald-600 text-white px-2.5 py-1 rounded-lg font-semibold">CSV</button>
+            </div>
+
+            <!-- การ์ดสรุปยอดประจำวัน (Dark Summary Card) -->
+            <div class="dark-card-gradient text-white rounded-3xl p-5 shadow-lg border border-slate-800 space-y-4">
+                <div class="flex justify-between items-start border-b border-slate-700/60 pb-3">
+                    <div>
+                        <p class="text-[11px] text-slate-400 font-medium">ยอดลงของประจำวันที่ <span id="detail-date-title" class="text-amber-400 font-bold"></span></p>
+                        <h3 id="detail-total-amount" class="text-2xl font-bold text-amber-400 mt-0.5">฿0.00</h3>
+                    </div>
+                    <span id="detail-count-badge" class="px-3 py-1 bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[10px] rounded-full font-semibold">0 รายการ</span>
+                </div>
+
+                <!-- รายการสินค้าที่ซื้อเข้าวันนั้น -->
+                <div id="detail-items-list" class="space-y-2 max-h-48 overflow-y-auto"></div>
+            </div>
+        </section>
+
+        <!-- 2. INVENTORY TAB (รายการสินค้า & สต๊อก) -->
+        <section id="tab-inventory" class="tab-content hidden space-y-3">
+            <div class="bg-white p-3.5 rounded-2xl border border-slate-100 shadow-sm space-y-2.5">
+                <div class="relative w-full">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-xs"></i>
+                    <input type="text" id="inventory-search" placeholder="ค้นหารหัส หรือชื่อสินค้า..." class="w-full pl-8 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-400">
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <select id="inventory-cat-filter" class="w-full py-2 px-2 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none"></select>
+                    <select id="inventory-status-filter" class="w-full py-2 px-2 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none">
+                        <option value="ALL">สถานะทั้งหมด</option>
+                        <option value="LOW">เฉพาะสต๊อกต่ำ/หมด</option>
+                        <option value="ORDERED">สั่งซื้อแล้ว (รอของส่ง)</option>
+                        <option value="NORMAL">ปกติ</option>
+                    </select>
+                </div>
+
+                <div class="flex gap-2">
+                    <button id="owner-add-item-btn" onclick="openItemModal()" class="hidden flex-1 bg-slate-900 text-amber-400 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center space-x-1 shadow-sm">
+                        <i class="fa-solid fa-plus text-xs"></i>
+                        <span>เพิ่มสินค้าใหม่</span>
+                    </button>
+                    <button id="owner-add-cat-btn" onclick="openCategoryModal()" class="hidden px-3 bg-slate-100 text-slate-700 py-2.5 rounded-xl text-xs font-semibold">
+                        + หมวดหมู่
+                    </button>
+                </div>
+            </div>
+
+            <div id="inventory-mobile-list" class="space-y-2.5"></div>
+        </section>
+
+        <!-- 3. DASHBOARD TAB (ภาพรวมระบบ) -->
+        <section id="tab-dashboard" class="tab-content hidden space-y-4">
+            <div class="grid grid-cols-2 gap-3">
+                <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                    <p class="text-[11px] text-slate-400">สินค้าทั้งหมด</p>
+                    <h3 id="stat-total-items" class="text-xl font-bold text-slate-800 mt-0.5">0</h3>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                    <p class="text-[11px] text-slate-400">เตือนสต๊อกต่ำ</p>
+                    <h3 id="stat-low-stock" class="text-xl font-bold text-rose-600 mt-0.5">0</h3>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                    <p class="text-[11px] text-slate-400">ยอดซื้อเข้าเดือนนี้</p>
+                    <h3 id="stat-month-expense" class="text-sm font-bold text-slate-800 mt-0.5">฿0</h3>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                    <p class="text-[11px] text-slate-400">มูลค่าสต๊อกรวม</p>
+                    <h3 id="stat-total-stock-value" class="text-sm font-bold text-emerald-700 mt-0.5">฿0</h3>
+                </div>
+            </div>
+
+            <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm space-y-3">
+                <h3 class="font-bold text-slate-800 text-xs">สัดส่วนสต๊อกตามหมวดหมู่</h3>
+                <div class="h-48 relative">
+                    <canvas id="categoryChart"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm space-y-2">
+                <h3 class="font-bold text-slate-800 text-xs">สินค้าสต๊อกต่ำวิกฤต</h3>
+                <div id="dashboard-low-stock-list" class="space-y-2 max-h-48 overflow-y-auto"></div>
+            </div>
+        </section>
+
+        <!-- 4. ADJUST LOGS TAB (ประวัติการปรับปรุงสต๊อก) -->
+        <section id="tab-adjust-logs" class="tab-content hidden space-y-3">
+            <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm space-y-3">
+                <div class="flex justify-between items-center">
+                    <h3 class="font-bold text-slate-800 text-sm">ประวัติการปรับปรุงสต๊อก</h3>
+                    <button onclick="clearAdjustLogs()" class="owner-col hidden text-xs text-rose-500 font-medium">ล้างประวัติ</button>
+                </div>
+                <div id="adjust-logs-mobile-container" class="space-y-2 text-xs"></div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Bottom Navigation Bar (แถบเมนูด้านล่าง) -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-40 pb-safe shadow-lg">
+        <div class="max-w-md mx-auto grid grid-cols-4 items-center justify-items-center py-2 px-1">
+            
+            <!-- 1. ปฏิทิน/ยอด -->
+            <button onclick="switchTab('calendar')" id="nav-calendar" class="nav-btn flex flex-col items-center justify-center w-full py-1 text-amber-500 font-semibold">
+                <i class="fa-solid fa-calendar-days text-lg"></i>
+                <span class="text-[10px] mt-1">ปฏิทิน/ยอด</span>
+            </button>
+
+            <!-- 2. ปุ่มเติมสต๊อก (ตำแหน่งปุ่มสีแดงในภาพ) -->
+            <button onclick="triggerQuickAddModal()" class="flex flex-col items-center justify-center w-full py-1 text-slate-700 hover:text-amber-500 active:scale-95 transition">
+                <div class="w-9 h-9 rounded-full bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center shadow-xs">
+                    <i class="fa-solid fa-box-archive text-sm"></i>
+                </div>
+                <span class="text-[10px] font-bold text-rose-600 mt-0.5">เติมสต๊อก</span>
+            </button>
+
+            <!-- 3. ปุ่มเบิกออก (ตำแหน่งปุ่มสีเขียวในภาพ) -->
+            <button onclick="triggerQuickSubModal()" class="flex flex-col items-center justify-center w-full py-1 text-slate-700 hover:text-amber-500 active:scale-95 transition">
+                <div class="w-9 h-9 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center shadow-xs">
+                    <i class="fa-solid fa-dolly text-sm"></i>
+                </div>
+                <span class="text-[10px] font-bold text-emerald-600 mt-0.5">เบิกออก</span>
+            </button>
+
+            <!-- 4. รายการสินค้า -->
+            <button onclick="switchTab('inventory')" id="nav-inventory" class="nav-btn flex flex-col items-center justify-center w-full py-1 text-slate-400">
+                <i class="fa-solid fa-boxes-stacked text-lg"></i>
+                <span class="text-[10px] mt-1">รายการสินค้า</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- MODALS -->
+
+    <!-- OWNER AUTH MODAL -->
+    <div id="owner-auth-modal" class="fixed inset-0 modal-backdrop z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-xs w-full p-5 shadow-xl space-y-3">
+            <h3 class="font-bold text-slate-800 text-sm">ยืนยันสิทธิ์เจ้าของร้าน</h3>
+            <form onsubmit="handleOwnerAuth(event)" class="space-y-3 text-xs">
+                <input type="password" id="owner-password-input" required placeholder="กรอกรหัสผ่าน..." class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none">
+                <p id="owner-auth-error" class="text-rose-500 hidden text-[11px]">รหัสผ่านไม่ถูกต้อง</p>
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="closeOwnerAuthModal()" class="px-3 py-1.5 text-slate-500">ยกเลิก</button>
+                    <button type="submit" class="bg-amber-500 text-slate-950 px-4 py-1.5 font-bold rounded-xl">ยืนยัน</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- QUICK ADJUSTMENT MODAL (เติมสต๊อก / เบิกออก) -->
+    <div id="quick-adjust-modal" class="fixed inset-0 modal-backdrop z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-xs w-full p-5 shadow-xl space-y-3">
+            <h3 class="font-bold text-slate-800 text-sm" id="adjust-modal-title">ปรับสต๊อกด่วน</h3>
+            
+            <div class="space-y-2.5 text-xs">
+                <div>
+                    <label class="block text-slate-500 mb-1">เลือกรายการสินค้า</label>
+                    <select id="adjust-select-item" onchange="onAdjustItemChange()" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-400"></select>
+                </div>
+
+                <div>
+                    <label class="block text-slate-500 mb-1">ประเภท</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" id="adjust-type-add" onclick="setAdjustType('ADD')" class="py-2 border border-emerald-300 bg-emerald-50 text-emerald-800 rounded-xl font-semibold">รับเข้า (+)</button>
+                        <button type="button" id="adjust-type-sub" onclick="setAdjustType('SUB')" class="py-2 border border-slate-200 text-slate-600 rounded-xl font-semibold">เบิกออก (-)</button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-slate-500 mb-1">จำนวน (<span id="adjust-unit-label">ชิ้น</span>)</label>
+                        <input type="number" id="adjust-qty" step="0.01" min="0.01" required oninput="calculateAdjustTotal()" placeholder="0" class="w-full p-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl outline-none">
+                    </div>
+                    <div id="adjust-cost-container">
+                        <label class="block text-slate-500 mb-1">ต้นทุน/หน่วย (฿)</label>
+                        <input type="number" id="adjust-unit-cost" step="0.01" min="0" oninput="calculateAdjustTotal()" placeholder="0.00" class="w-full p-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl outline-none">
+                    </div>
+                </div>
+
+                <div id="adjust-total-box" class="p-2.5 bg-amber-50 rounded-xl border border-amber-200 flex justify-between items-center text-xs">
+                    <span class="text-slate-600 font-medium">ราคารวมทั้งสิ้น:</span>
+                    <span id="adjust-total-display" class="font-bold text-amber-700">฿0.00</span>
+                </div>
+
+                <div>
+                    <label class="block text-slate-500 mb-1">ผู้ขาย / หมายเหตุ</label>
+                    <input type="text" id="adjust-reason" placeholder="เช่น สั่ง Makro / เบิกหน้าร้าน..." class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none">
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" onclick="closeAdjustModal()" class="px-3 py-1.5 text-xs text-slate-500">ยกเลิก</button>
+                <button type="button" onclick="submitQuickAdjust()" class="bg-amber-500 text-slate-950 font-bold px-4 py-1.5 text-xs rounded-xl">บันทึก</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MARK ORDERED MODAL (ทำเครื่องหมายว่าสั่งซื้อแล้ว) -->
+    <div id="mark-ordered-modal" class="fixed inset-0 modal-backdrop z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-xs w-full p-5 shadow-xl space-y-3">
+            <h3 class="font-bold text-slate-800 text-sm">สั่งซื้อแล้ว: <span id="ordered-item-name" class="text-amber-600"></span></h3>
+            
+            <form onsubmit="handleSaveOrderedStatus(event)" class="space-y-3 text-xs">
+                <input type="hidden" id="ordered-item-id">
+                <div>
+                    <label class="block text-slate-600 font-medium mb-1">จำนวนที่สั่งซื้อ (<span id="ordered-item-unit"></span>)</label>
+                    <input type="number" id="ordered-qty-input" step="0.01" min="0.01" required placeholder="เช่น 10" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-slate-600 font-medium mb-1">หมายเหตุ / ร้านที่สั่งซื้อ</label>
+                    <input type="text" id="ordered-note-input" placeholder="เช่น รอของส่ง 2 วัน..." class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none">
+                </div>
+
+                <div class="flex justify-end gap-2 pt-1">
+                    <button type="button" onclick="closeMarkOrderedModal()" class="px-3 py-1.5 text-slate-500">ยกเลิก</button>
+                    <button type="submit" class="bg-amber-500 text-white font-bold px-4 py-1.5 rounded-xl">ยืนยันสั่งซื้อแล้ว</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ITEM EDIT/ADD MODAL -->
+    <div id="item-modal" class="fixed inset-0 modal-backdrop z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-xs w-full p-5 shadow-xl space-y-3">
+            <h3 id="item-modal-title" class="font-bold text-slate-800 text-sm">เพิ่มรายการสินค้า</h3>
+            <form id="item-form" onsubmit="handleSaveItem(event)" class="space-y-2.5 text-xs">
+                <input type="hidden" id="item-form-id">
+                <input type="text" id="item-form-code" required placeholder="รหัสสินค้า" class="w-full p-2 bg-slate-50 border rounded-xl outline-none">
+                <input type="text" id="item-form-name" required placeholder="ชื่อสินค้า" class="w-full p-2 bg-slate-50 border rounded-xl outline-none">
+                <select id="item-form-category" required class="w-full p-2 bg-slate-50 border rounded-xl outline-none"></select>
+                <div class="grid grid-cols-3 gap-1.5">
+                    <input type="number" id="item-form-stock" required placeholder="คงเหลือ" class="w-full p-2 bg-slate-50 border rounded-xl outline-none">
+                    <input type="text" id="item-form-unit" required placeholder="หน่วย" class="w-full p-2 bg-slate-50 border rounded-xl outline-none">
+                    <input type="number" id="item-form-min" required placeholder="เตือนต่ำ" class="w-full p-2 bg-slate-50 border rounded-xl outline-none">
+                </div>
+                <input type="number" id="item-form-cost" step="0.01" placeholder="ต้นทุนล่าสุด (฿)" class="w-full p-2 bg-slate-50 border rounded-xl outline-none">
+                
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeItemModal()" class="px-3 py-1.5 text-slate-500">ยกเลิก</button>
+                    <button type="submit" class="bg-amber-500 text-slate-950 font-bold px-4 py-1.5 rounded-xl">บันทึก</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- CATEGORY MODAL -->
+    <div id="category-modal" class="fixed inset-0 modal-backdrop z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-xs w-full p-5 shadow-xl space-y-3">
+            <h3 class="font-bold text-slate-800 text-sm">เพิ่มหมวดหมู่สินค้า</h3>
+            <form onsubmit="handleSaveCategory(event)" class="space-y-3 text-xs">
+                <input type="text" id="cat-form-name" required placeholder="ชื่อหมวดหมู่..." class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none">
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="closeCategoryModal()" class="px-3 py-1.5 text-slate-500">ยกเลิก</button>
+                    <button type="submit" class="bg-amber-500 text-slate-950 font-bold px-4 py-1.5 rounded-xl">บันทึก</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast" class="fixed bottom-16 left-1/2 transform -translate-x-1/2 z-50 opacity-0 transition-all duration-300 bg-slate-900 text-amber-400 px-4 py-2.5 rounded-full shadow-lg text-xs font-semibold flex items-center space-x-2">
+        <i id="toast-icon" class="fa-solid fa-circle-check"></i>
+        <span id="toast-message">ทำรายการสำเร็จ</span>
+    </div>
+
+    <!-- Application Logic -->
+    <script>
+        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxHfEuD3OPReTK9AafZq_VKSVTwntQBhz9mMRHf39Shl9V_zZ7ORsbmZfOotmbR6bzk0g/exec';
+        let googleScriptUrl = DEFAULT_SCRIPT_URL;
+
+        const OWNER_PASSWORD = '037cafe';
+        let currentRole = 'STAFF';
+        let activeTabId = 'calendar';
+        let selectedAdjustItemId = null;
+        let selectedAdjustType = 'ADD';
+        let categoryChartInstance = null;
+
+        let categories = [{ id: 1, name: 'ทั่วไป' }];
+        let items = [];
+        let purchases = [];
+        let adjustLogs = [];
+        let autoSyncTimer = null;
+
+        let calendarCurrentDate = new Date();
+        let selectedDateStr = getFormattedDate(); 
+
+        function normalizeText(str) {
+            if (!str) return '';
+            return String(str).toLowerCase().replace(/[\u0300-\u036f]/g, '').replace(/[่้๊๋็์ํ๎]/g, '').replace(/\s+/g, '');
+        }
+
+        // แปลงวันที่ให้อยู่ในรูปแบบ DD/MM/YYYY ทั้งหมด
+        function parseToStandardDateStr(dateInput) {
+            if (!dateInput) return '';
+            if (dateInput instanceof Date) {
+                const d = String(dateInput.getDate()).padStart(2, '0');
+                const m = String(dateInput.getMonth() + 1).padStart(2, '0');
+                const y = dateInput.getFullYear();
+                return `${d}/${m}/${y}`;
+            }
+            let str = String(dateInput).trim();
+            if (str.includes('T')) str = str.split('T')[0];
+            if (str.includes('-')) {
+                const parts = str.split('-');
+                if (parts.length === 3 && parts[0].length === 4) {
+                    return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
+                }
+            }
+            return str;
+        }
+
+        function parseDMYToDateObj(dmyStr) {
+            if (!dmyStr) return null;
+            const parts = dmyStr.split('/');
+            if (parts.length === 3) return new Date(parts[2], parts[1] - 1, parts[0]);
+            return new Date(dmyStr);
+        }
+
+        function getFormattedDate(daysAgo = 0) {
+            const d = new Date();
+            d.setDate(d.getDate() - daysAgo);
+            return parseToStandardDateStr(d);
+        }
+
+        function getFormattedDateTime() {
+            const d = new Date();
+            return d.toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' });
+        }
+
+        async function sendLowStockToLine() {
+            if (!googleScriptUrl) return alert('กรุณาตั้งค่า Google Script URL ก่อนทำรายการ');
+            showToast('กำลังส่งสรุปสต๊อกต่ำเข้า LINE...');
+            try {
+                await fetch(googleScriptUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'checkLowStockSummary' })
+                });
+                showToast('ส่งสรุปรายการสต๊อกต่ำเข้า LINE เรียบร้อยแล้ว!');
+            } catch (err) {
+                console.error('Send Low Stock LINE error:', err);
+                alert('เกิดข้อผิดพลาดในการส่งข้อความสรุปสต๊อกต่ำเข้า LINE');
+            }
+        }
+
+        async function fetchDataFromGoogleSheet(showToastAlert = false) {
+            if (!googleScriptUrl) {
+                loadLocalOrDefaultData();
+                return;
+            }
+
+            try {
+                if (showToastAlert) showToast('กำลังซิงค์ข้อมูลจาก Sheets...');
+                const res = await fetch(googleScriptUrl + (googleScriptUrl.includes('?') ? '&' : '?') + '_t=' + Date.now());
+                const resData = await res.json();
+
+                if (resData.categories && Array.isArray(resData.categories)) categories = resData.categories;
+
+                if (resData.purchases && Array.isArray(resData.purchases)) {
+                    const serverPurchases = resData.purchases.map(p => ({ ...p, date: parseToStandardDateStr(p.date) }));
+                    const mergedPurchases = [...purchases];
+                    serverPurchases.forEach(sp => {
+                        if (!mergedPurchases.some(lp => lp.date === sp.date && lp.itemCode === sp.itemCode && Number(lp.qty) === Number(sp.qty))) {
+                            mergedPurchases.push(sp);
+                        }
+                    });
+                    mergedPurchases.sort((a, b) => parseDMYToDateObj(b.date) - parseDMYToDateObj(a.date));
+                    purchases = mergedPurchases;
+                }
+
+                const rawItems = Array.isArray(resData) ? resData : (resData.items || []);
+                if (rawItems.length > 0) {
+                    items = rawItems.map((row, idx) => {
+                        const catName = row.categoryName || row['หมวดหมู่'] || 'ทั่วไป';
+                        let matchedCat = categories.find(c => c.name === catName);
+                        if (!matchedCat) {
+                            matchedCat = { id: categories.length + 1, name: catName };
+                            categories.push(matchedCat);
+                        }
+                        const isOrderedVal = row.isOrdered !== undefined ? row.isOrdered : row['สั่งซื้อแล้ว'];
+                        const isOrderedBool = (isOrderedVal === true || String(isOrderedVal).toUpperCase() === 'TRUE');
+
+                        return {
+                            id: row.id || idx + 1,
+                            code: row.code || row['รหัสสินค้า'] || '',
+                            name: row.name || row['ชื่อสินค้า'] || '',
+                            stock: Number(row.stock !== undefined ? row.stock : row['จำนวนคงเหลือ']) || 0,
+                            minAlert: Number(row.minAlert !== undefined ? row.minAlert : row['จุดเตือนสต๊อกต่ำ (Min Stock)']) || 0,
+                            lastCost: Number(row.lastCost !== undefined ? row.lastCost : row['ราคาต้นทุนที่ซื้อ']) || 0,
+                            categoryId: matchedCat.id,
+                            categoryName: catName,
+                            unit: row.unit || 'ชิ้น',
+                            isOrdered: isOrderedBool,
+                            orderedQty: Number(row.orderedQty || row['จำนวนที่สั่งซื้อ'] || 0),
+                            orderedNote: String(row.orderedNote || row['หมายเหตุสั่งซื้อ'] || '')
+                        };
+                    });
+                    saveToLocalStorage();
+                    if (showToastAlert) showToast('ซิงค์ข้อมูลสำเร็จเรียบร้อย');
+                } else {
+                    loadLocalOrDefaultData();
+                }
+            } catch (err) {
+                console.error('Fetch error:', err);
+                if (showToastAlert) loadLocalOrDefaultData();
+            }
+
+            renderAllViews();
+        }
+
+        function startAutoSync() {
+            if (autoSyncTimer) clearInterval(autoSyncTimer);
+            autoSyncTimer = setInterval(() => fetchDataFromGoogleSheet(false), 10000);
+        }
+
+        function stopAutoSync() {
+            if (autoSyncTimer) { clearInterval(autoSyncTimer); autoSyncTimer = null; }
+        }
+
+        function loadLocalOrDefaultData() {
+            categories = JSON.parse(localStorage.getItem('037_categories') || '[{"id":1,"name":"ทั่วไป"}]');
+            items = JSON.parse(localStorage.getItem('037_items') || '[]');
+            purchases = JSON.parse(localStorage.getItem('037_purchases') || '[]');
+            adjustLogs = JSON.parse(localStorage.getItem('037_adjust_logs') || '[]');
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem('037_categories', JSON.stringify(categories));
+            localStorage.setItem('037_items', JSON.stringify(items));
+            localStorage.setItem('037_purchases', JSON.stringify(purchases));
+            localStorage.setItem('037_adjust_logs', JSON.stringify(adjustLogs));
+        }
+
+        async function syncItemToGoogleSheet(action, payloadData) {
+            if (!googleScriptUrl) return;
+            try {
+                await fetch(googleScriptUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action, ...payloadData })
+                });
+                setTimeout(() => fetchDataFromGoogleSheet(false), 1200);
+            } catch (err) { console.error(err); }
+        }
+
+        function handleRoleSelect(role) {
+            if (role === 'OWNER') {
+                document.getElementById('owner-password-input').value = '';
+                document.getElementById('owner-auth-modal').classList.remove('hidden');
+            } else {
+                switchRole('STAFF');
+            }
+        }
+
+        function closeOwnerAuthModal() {
+            document.getElementById('owner-auth-modal').classList.add('hidden');
+            document.getElementById('role-selector').value = currentRole;
+        }
+
+        function handleOwnerAuth(e) {
+            e.preventDefault();
+            if (document.getElementById('owner-password-input').value === OWNER_PASSWORD) {
+                closeOwnerAuthModal();
+                switchRole('OWNER');
+            } else {
+                document.getElementById('owner-auth-error').classList.remove('hidden');
+            }
+        }
+
+        function switchRole(role) {
+            currentRole = role;
+            document.getElementById('role-selector').value = role;
+
+            if (role === 'OWNER') {
+                stopAutoSync();
+                document.querySelectorAll('.owner-col').forEach(el => el.classList.remove('hidden'));
+                document.getElementById('owner-add-item-btn')?.classList.remove('hidden');
+                document.getElementById('owner-add-cat-btn')?.classList.remove('hidden');
+                showToast('เข้าสู่โหมด: เจ้าของร้าน');
+            } else {
+                startAutoSync();
+                document.querySelectorAll('.owner-col').forEach(el => el.classList.add('hidden'));
+                document.getElementById('owner-add-item-btn')?.classList.add('hidden');
+                document.getElementById('owner-add-cat-btn')?.classList.add('hidden');
+                showToast('เข้าสู่โหมด: พนักงาน (Auto-Sync)');
+            }
+            renderInventoryTable();
+        }
+
+        function switchTab(tabId) {
+            activeTabId = tabId;
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-btn').forEach(el => el.className = 'nav-btn flex flex-col items-center justify-center w-full py-1 text-slate-400');
+
+            const activeTab = document.getElementById(`tab-${tabId}`);
+            if (activeTab) activeTab.classList.remove('hidden');
+
+            const activeNav = document.getElementById(`nav-${tabId}`);
+            if (activeNav) activeNav.className = 'nav-btn flex flex-col items-center justify-center w-full py-1 text-amber-500 font-semibold';
+
+            if (tabId === 'calendar') renderCalendarView();
+            if (tabId === 'inventory') renderInventoryTable();
+            if (tabId === 'dashboard') renderDashboard();
+            if (tabId === 'adjust-logs') renderAdjustLogs();
+        }
+
+        /* ------------------ ฟังก์ชันตารางปฏิทิน ------------------ */
+        function changeCalendarMonth(offset) {
+            calendarCurrentDate.setMonth(calendarCurrentDate.getMonth() + offset);
+            renderCalendarView();
+        }
+
+        function resetCalendarToCurrent() {
+            calendarCurrentDate = new Date();
+            selectedDateStr = getFormattedDate();
+            renderCalendarView();
+            showDayDetails(selectedDateStr);
+        }
+
+        function renderCalendarView() {
+            const grid = document.getElementById('calendar-grid');
+            const title = document.getElementById('calendar-month-year');
+            if (!grid) return;
+
+            const year = calendarCurrentDate.getFullYear();
+            const month = calendarCurrentDate.getMonth();
+
+            const monthNamesTH = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+            title.innerText = `${monthNamesTH[month]} ${year + 543}`;
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            const dailyTotals = {};
+            purchases.forEach(p => {
+                if (p.date) {
+                    const pDateObj = parseDMYToDateObj(p.date);
+                    if (pDateObj && pDateObj.getFullYear() === year && pDateObj.getMonth() === month) {
+                        const d = pDateObj.getDate();
+                        dailyTotals[d] = (dailyTotals[d] || 0) + Number(p.total || 0);
+                    }
+                }
+            });
+
+            let html = '';
+            for (let i = 0; i < firstDay; i++) {
+                html += `<div class="p-1 min-h-[48px] bg-slate-50/30 rounded-xl"></div>`;
+            }
+
+            const today = new Date();
+            const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const total = dailyTotals[d] || 0;
+                const isToday = isCurrentMonth && today.getDate() === d;
+                const dateStr = `${String(d).padStart(2, '0')}/${String(month + 1).padStart(2, '0')}/${year}`;
+                const isSelected = (selectedDateStr === dateStr);
+
+                let bgClass = 'bg-slate-50 text-slate-700';
+                if (isSelected) {
+                    bgClass = 'bg-amber-500 text-slate-950 font-bold shadow-md';
+                } else if (isToday) {
+                    bgClass = 'bg-amber-100 text-amber-900 border border-amber-300';
+                }
+
+                html += `
+                    <div onclick="showDayDetails('${dateStr}')" class="p-1.5 min-h-[50px] rounded-2xl ${bgClass} transition cursor-pointer flex flex-col justify-between items-center">
+                        <span class="text-xs font-semibold">${d}</span>
+                        ${total > 0 ? `
+                            <span class="w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-slate-950' : 'bg-emerald-500'}"></span>
+                        ` : '<span class="text-[9px] text-slate-300">-</span>'}
+                    </div>
+                `;
+            }
+
+            grid.innerHTML = html;
+        }
+
+        function showDayDetails(dateStr) {
+            selectedDateStr = parseToStandardDateStr(dateStr);
+            const dateTitle = document.getElementById('detail-date-title');
+            const totalDisplay = document.getElementById('detail-total-amount');
+            const countBadge = document.getElementById('detail-count-badge');
+            const itemsList = document.getElementById('detail-items-list');
+
+            const dayPurchases = purchases.filter(p => parseToStandardDateStr(p.date) === selectedDateStr);
+            const totalSum = dayPurchases.reduce((sum, p) => sum + Number(p.total || 0), 0);
+
+            dateTitle.innerText = selectedDateStr;
+            totalDisplay.innerText = `฿${totalSum.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`;
+            countBadge.innerText = `${dayPurchases.length} รายการ`;
+
+            if (dayPurchases.length === 0) {
+                itemsList.innerHTML = `<p class="text-xs text-slate-400 py-3 text-center">ไม่มีรายการลงของในวันที่นี้</p>`;
+            } else {
+                itemsList.innerHTML = dayPurchases.map(p => `
+                    <div class="p-2.5 bg-slate-800/80 rounded-2xl border border-slate-700 flex justify-between items-center text-xs">
+                        <div>
+                            <p class="font-bold text-white">${escapeHtml(p.itemName)} <span class="text-[10px] text-slate-400 font-mono">(${escapeHtml(p.itemCode)})</span></p>
+                            <p class="text-[10px] text-slate-400">+${p.qty} ${escapeHtml(p.unit || '')} | ต้นทุน: ฿${Number(p.unitCost).toFixed(2)} | ร้าน: ${escapeHtml(p.supplier || '-')}</p>
+                        </div>
+                        <span class="font-bold text-amber-400">฿${Number(p.total).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                `).join('');
+            }
+
+            renderCalendarView();
+        }
+
+        /* ------------------ ฟังก์ชันปุ่มด่วน เติมสต๊อก (แดง) / เบิกออก (เขียว) ------------------ */
+        function triggerQuickAddModal() {
+            openQuickAdjustModalWithMode('ADD');
+        }
+
+        function triggerQuickSubModal() {
+            openQuickAdjustModalWithMode('SUB');
+        }
+
+        function openQuickAdjustModalWithMode(mode, itemId = null) {
+            const selectEl = document.getElementById('adjust-select-item');
+            selectEl.innerHTML = items.map(i => `<option value="${i.id}">${escapeHtml(i.name)} (${escapeHtml(i.code)}) - เหลือ: ${i.stock} ${i.unit}</option>`).join('');
+            
+            if (itemId) selectEl.value = itemId;
+
+            setAdjustType(mode);
+            onAdjustItemChange();
+            document.getElementById('adjust-qty').value = '';
+            document.getElementById('adjust-reason').value = '';
+            document.getElementById('quick-adjust-modal').classList.remove('hidden');
+        }
+
+        function onAdjustItemChange() {
+            const itemId = Number(document.getElementById('adjust-select-item').value);
+            const item = items.find(i => Number(i.id) === itemId);
+            if (item) {
+                document.getElementById('adjust-unit-label').innerText = item.unit;
+                document.getElementById('adjust-unit-cost').value = item.lastCost || 0;
+            }
+            calculateAdjustTotal();
+        }
+
+        function calculateAdjustTotal() {
+            const qty = Number(document.getElementById('adjust-qty').value) || 0;
+            const cost = Number(document.getElementById('adjust-unit-cost').value) || 0;
+            const total = qty * cost;
+            document.getElementById('adjust-total-display').innerText = `฿${total.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`;
+        }
+
+        function setAdjustType(type) {
+            selectedAdjustType = type;
+            const addBtn = document.getElementById('adjust-type-add');
+            const subBtn = document.getElementById('adjust-type-sub');
+            const costBox = document.getElementById('adjust-cost-container');
+            const totalBox = document.getElementById('adjust-total-box');
+            const titleEl = document.getElementById('adjust-modal-title');
+
+            if (type === 'ADD') {
+                titleEl.innerText = 'เติมสต๊อกสินค้าเข้า';
+                addBtn.className = 'py-2 border border-emerald-300 bg-emerald-50 text-emerald-800 rounded-xl font-semibold';
+                subBtn.className = 'py-2 border border-slate-200 text-slate-600 rounded-xl font-semibold';
+                costBox.classList.remove('hidden');
+                totalBox.classList.remove('hidden');
+            } else {
+                titleEl.innerText = 'เบิกสินค้าออกจากสต๊อก';
+                subBtn.className = 'py-2 border border-rose-300 bg-rose-50 text-rose-800 rounded-xl font-semibold';
+                addBtn.className = 'py-2 border border-slate-200 text-slate-600 rounded-xl font-semibold';
+                costBox.classList.add('hidden');
+                totalBox.classList.add('hidden');
+            }
+        }
+
+        function closeAdjustModal() {
+            document.getElementById('quick-adjust-modal').classList.add('hidden');
+        }
+
+        function submitQuickAdjust() {
+            const itemId = Number(document.getElementById('adjust-select-item').value);
+            const qty = Number(document.getElementById('adjust-qty').value);
+            const unitCost = Number(document.getElementById('adjust-unit-cost').value) || 0;
+            const reason = document.getElementById('adjust-reason').value.trim() || (selectedAdjustType === 'ADD' ? 'เติมสต๊อกด่วน' : 'เบิกหน้าร้าน');
+
+            if (!qty || qty <= 0) return alert('กรุณากรอกจำนวนที่ถูกต้อง');
+            const item = items.find(i => Number(i.id) === itemId);
+            if (!item) return;
+
+            const todayDateStr = getFormattedDate();
+
+            if (selectedAdjustType === 'ADD') {
+                item.stock += qty;
+                item.lastCost = unitCost;
+                if (item.stock > item.minAlert) {
+                    item.isOrdered = false;
+                    item.orderedQty = 0;
+                    item.orderedNote = '';
+                }
+
+                const totalCost = qty * unitCost;
+
+                purchases.unshift({
+                    id: Date.now(),
+                    date: todayDateStr,
+                    itemId: item.id,
+                    itemName: item.name,
+                    itemCode: item.code,
+                    unitCost: unitCost,
+                    qty: qty,
+                    unit: item.unit,
+                    total: totalCost,
+                    supplier: reason
+                });
+            } else {
+                if (item.stock < qty) return alert('สต๊อกคงเหลือไม่พอสำหรับการเบิกออก');
+                item.stock -= qty;
+            }
+
+            adjustLogs.unshift({
+                id: Date.now(),
+                timestamp: getFormattedDateTime(),
+                itemId: item.id,
+                itemName: item.name,
+                itemCode: item.code,
+                type: selectedAdjustType,
+                qty: qty,
+                unit: item.unit,
+                reason: reason
+            });
+
+            saveToLocalStorage();
+            closeAdjustModal();
+            renderAllViews();
+            showToast(selectedAdjustType === 'ADD' ? 'เติมสต๊อกและบันทึกลงปฏิทินเรียบร้อย' : 'เบิกสต๊อกออกเรียบร้อย');
+
+            syncItemToGoogleSheet('quickAdjust', {
+                date: todayDateStr,
+                code: item.code,
+                name: item.name,
+                type: selectedAdjustType,
+                qty: qty,
+                unitCost: unitCost,
+                reason: reason
+            });
+        }
+
+        /* ------------------ ฟังก์ชันจัดการข้อมูลสต๊อก & สั่งซื้อ ------------------ */
+        function openMarkOrderedModal(itemId) {
+            const item = items.find(i => Number(i.id) === Number(itemId));
+            if (!item) return;
+
+            document.getElementById('ordered-item-id').value = item.id;
+            document.getElementById('ordered-item-name').innerText = item.name;
+            document.getElementById('ordered-item-unit').innerText = item.unit;
+            document.getElementById('ordered-qty-input').value = item.orderedQty || '';
+            document.getElementById('ordered-note-input').value = item.orderedNote || '';
+
+            document.getElementById('mark-ordered-modal').classList.remove('hidden');
+        }
+
+        function closeMarkOrderedModal() {
+            document.getElementById('mark-ordered-modal').classList.add('hidden');
+        }
+
+        function handleSaveOrderedStatus(e) {
+            e.preventDefault();
+            const itemId = Number(document.getElementById('ordered-item-id').value);
+            const qty = Number(document.getElementById('ordered-qty-input').value);
+            const note = document.getElementById('ordered-note-input').value.trim();
+
+            const item = items.find(i => Number(i.id) === itemId);
+            if (!item) return;
+
+            item.isOrdered = true;
+            item.orderedQty = qty;
+            item.orderedNote = note;
+
+            saveToLocalStorage();
+            closeMarkOrderedModal();
+            renderAllViews();
+            showToast(`ระบุ "${item.name}" เป็นสั่งซื้อแล้ว (${qty} ${item.unit})`);
+
+            syncItemToGoogleSheet('markOrdered', {
+                code: item.code,
+                name: item.name,
+                orderedQty: qty,
+                orderedNote: note
+            });
+        }
+
+        function renderInventoryTable() {
+            const container = document.getElementById('inventory-mobile-list');
+            if (!container) return;
+
+            const searchVal = normalizeText(document.getElementById('inventory-search')?.value || '');
+            const catVal = document.getElementById('inventory-cat-filter')?.value || 'ALL';
+            const statusVal = document.getElementById('inventory-status-filter')?.value || 'ALL';
+
+            const filtered = items.filter(item => {
+                const matchSearch = !searchVal || normalizeText(item.name).includes(searchVal) || normalizeText(item.code).includes(searchVal);
+                const matchCat = (catVal === 'ALL') || (item.categoryId == catVal);
+                let matchStatus = true;
+                if (statusVal === 'LOW') matchStatus = Number(item.stock) <= Number(item.minAlert) && !item.isOrdered;
+                else if (statusVal === 'ORDERED') matchStatus = Boolean(item.isOrdered);
+                else if (statusVal === 'NORMAL') matchStatus = Number(item.stock) > Number(item.minAlert);
+
+                return matchSearch && matchCat && matchStatus;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400 py-6 text-center">ไม่พบรายการสินค้า</p>`;
+                return;
+            }
+
+            container.innerHTML = filtered.map(item => {
+                const isLow = Number(item.stock) <= Number(item.minAlert);
+                let statusBadge = '';
+                if (item.isOrdered) {
+                    statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-700">สั่งแล้ว (${item.orderedQty} ${escapeHtml(item.unit)})</span>`;
+                } else if (isLow) {
+                    statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-100 text-rose-700">สต๊อกต่ำ</span>`;
+                } else {
+                    statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700">ปกติ</span>`;
+                }
+
+                let ownerOrderBtn = '';
+                if (currentRole === 'OWNER' && isLow && !item.isOrdered) {
+                    ownerOrderBtn = `<button onclick="openMarkOrderedModal(${item.id})" class="px-2.5 py-1.5 bg-amber-500 text-white font-bold rounded-xl text-xs shadow-xs">สั่งซื้อแล้ว</button>`;
+                }
+
+                return `
+                    <div class="bg-white p-3.5 rounded-2xl border border-slate-100 shadow-xs space-y-2">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <span class="text-[10px] font-mono text-slate-400">${escapeHtml(item.code)}</span>
+                                <h4 class="font-bold text-slate-800 text-xs">${escapeHtml(item.name)}</h4>
+                            </div>
+                            ${statusBadge}
+                        </div>
+                        <div class="flex justify-between items-center bg-slate-50 p-2 rounded-xl text-xs">
+                            <div>
+                                <p class="text-[10px] text-slate-400">คงเหลือ</p>
+                                <p class="font-bold ${isLow ? 'text-rose-600' : 'text-slate-700'}">${item.stock} ${escapeHtml(item.unit)}</p>
+                            </div>
+                            <div class="flex gap-1.5">
+                                ${ownerOrderBtn}
+                                <button onclick="openQuickAdjustModalWithMode('ADD', ${item.id})" class="px-2.5 py-1.5 bg-amber-500 text-slate-950 font-bold rounded-xl text-xs">
+                                    + เติม
+                                </button>
+                                ${currentRole === 'OWNER' ? `<button onclick="openItemModal(${item.id})" class="p-1.5 text-slate-400 hover:text-slate-600"><i class="fa-solid fa-pen-to-square"></i></button>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderDashboard() {
+            const lowStockItems = items.filter(i => Number(i.stock) <= Number(i.minAlert));
+            document.getElementById('stat-total-items').innerText = items.length;
+            document.getElementById('stat-low-stock').innerText = lowStockItems.length;
+
+            const now = new Date();
+            const monthTotal = purchases.filter(p => {
+                const pDate = parseDMYToDateObj(p.date);
+                return pDate && (pDate.getMonth() + 1) === (now.getMonth() + 1) && pDate.getFullYear() === now.getFullYear();
+            }).reduce((sum, p) => sum + Number(p.total || 0), 0);
+            document.getElementById('stat-month-expense').innerText = `฿${monthTotal.toLocaleString('th-TH')}`;
+
+            const totalStockValue = items.reduce((sum, item) => sum + (Number(item.stock) * Number(item.lastCost || 0)), 0);
+            document.getElementById('stat-total-stock-value').innerText = `฿${totalStockValue.toLocaleString('th-TH')}`;
+
+            const lowListContainer = document.getElementById('dashboard-low-stock-list');
+            if (lowStockItems.length === 0) {
+                lowListContainer.innerHTML = `<p class="text-xs text-slate-400 py-2 text-center">ไม่มีสินค้าสต๊อกต่ำ</p>`;
+            } else {
+                lowListContainer.innerHTML = lowStockItems.map(item => `
+                    <div class="p-2 bg-rose-50 rounded-xl border border-rose-100 flex justify-between items-center text-xs">
+                        <div>
+                            <p class="font-bold text-slate-800">${escapeHtml(item.name)}</p>
+                            <p class="text-[10px] text-rose-600">เหลือ: ${item.stock} ${escapeHtml(item.unit)}</p>
+                        </div>
+                        <button onclick="openQuickAdjustModalWithMode('ADD', ${item.id})" class="px-2 py-1 bg-amber-500 text-slate-950 font-bold rounded-lg text-[10px]">+ เติม</button>
+                    </div>
+                `).join('');
+            }
+
+            renderChart();
+        }
+
+        function renderChart() {
+            const ctx = document.getElementById('categoryChart')?.getContext('2d');
+            if (!ctx) return;
+            const labels = categories.map(c => c.name);
+            const dataCounts = categories.map(c => {
+                return items.filter(i => Number(i.categoryId) === Number(c.id)).reduce((acc, curr) => acc + Number(curr.stock), 0);
+            });
+
+            if (categoryChartInstance) categoryChartInstance.destroy();
+
+            categoryChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'จำนวนสต๊อกรวม',
+                        data: dataCounts,
+                        backgroundColor: '#F59E0B',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        function renderAdjustLogs() {
+            const container = document.getElementById('adjust-logs-mobile-container');
+            if (!container) return;
+
+            if (adjustLogs.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400 py-4 text-center">ยังไม่มีประวัติการปรับปรุงสต๊อก</p>`;
+                return;
+            }
+
+            container.innerHTML = adjustLogs.map(log => {
+                const isAdd = log.type === 'ADD';
+                return `
+                    <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-100 flex justify-between items-center">
+                        <div>
+                            <p class="font-bold text-slate-800">${escapeHtml(log.itemName)}</p>
+                            <p class="text-[10px] text-slate-400">${log.timestamp} | ${escapeHtml(log.reason || '-')}</p>
+                        </div>
+                        <span class="font-bold ${isAdd ? 'text-emerald-600' : 'text-rose-600'}">
+                            ${isAdd ? '+' : '-'}${log.qty} ${escapeHtml(log.unit || '')}
+                        </span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function clearAdjustLogs() {
+            if (confirm('ล้างประวัติการปรับปรุงสต๊อกทั้งหมดใช่หรือไม่?')) {
+                adjustLogs = [];
+                saveToLocalStorage();
+                renderAdjustLogs();
+                showToast('ล้างประวัติเรียบร้อย');
+            }
+        }
+
+        function openItemModal(itemId = null) {
+            populateCategoryDropdowns();
+            const modal = document.getElementById('item-modal');
+            const title = document.getElementById('item-modal-title');
+            const form = document.getElementById('item-form');
+
+            if (itemId) {
+                const item = items.find(i => Number(i.id) === Number(itemId));
+                if (!item) return;
+                title.innerText = 'แก้ไขรายการสินค้า';
+                document.getElementById('item-form-id').value = item.id;
+                document.getElementById('item-form-code').value = item.code;
+                document.getElementById('item-form-category').value = item.categoryId;
+                document.getElementById('item-form-name').value = item.name;
+                document.getElementById('item-form-stock').value = item.stock;
+                document.getElementById('item-form-unit').value = item.unit;
+                document.getElementById('item-form-min').value = item.minAlert;
+                document.getElementById('item-form-cost').value = item.lastCost;
+            } else {
+                title.innerText = 'เพิ่มรายการสินค้า';
+                form.reset();
+                document.getElementById('item-form-id').value = '';
+            }
+            modal.classList.remove('hidden');
+        }
+
+        function closeItemModal() { document.getElementById('item-modal').classList.add('hidden'); }
+
+        function handleSaveItem(e) {
+            e.preventDefault();
+            const idVal = document.getElementById('item-form-id').value;
+            const code = document.getElementById('item-form-code').value.trim();
+            const categoryId = Number(document.getElementById('item-form-category').value);
+            const name = document.getElementById('item-form-name').value.trim();
+            const stock = Number(document.getElementById('item-form-stock').value);
+            const unit = document.getElementById('item-form-unit').value.trim();
+            const minAlert = Number(document.getElementById('item-form-min').value);
+            const lastCost = Number(document.getElementById('item-form-cost').value) || 0;
+
+            const catObj = categories.find(c => Number(c.id) === categoryId);
+            const categoryName = catObj ? catObj.name : 'ทั่วไป';
+
+            const newItemObj = {
+                id: idVal ? Number(idVal) : Date.now(),
+                code, categoryId, categoryName, name, stock, unit, minAlert, lastCost,
+                isOrdered: false, orderedQty: 0, orderedNote: ''
+            };
+
+            if (idVal) {
+                const idx = items.findIndex(i => Number(i.id) === Number(idVal));
+                if (idx !== -1) items[idx] = { ...items[idx], ...newItemObj };
+            } else {
+                items.push(newItemObj);
+            }
+
+            saveToLocalStorage();
+            closeItemModal();
+            renderAllViews();
+            showToast('บันทึกสินค้าเรียบร้อย');
+            syncItemToGoogleSheet('saveItem', newItemObj);
+        }
+
+        function openCategoryModal() { document.getElementById('category-modal').classList.remove('hidden'); }
+        function closeCategoryModal() { document.getElementById('category-modal').classList.add('hidden'); }
+
+        function handleSaveCategory(e) {
+            e.preventDefault();
+            const name = document.getElementById('cat-form-name').value.trim();
+            if (name) {
+                categories.push({ id: Date.now(), name });
+                saveToLocalStorage();
+                closeCategoryModal();
+                renderAllViews();
+                showToast('เพิ่มหมวดหมู่เรียบร้อย');
+            }
+        }
+
+        function exportPurchasesCSV() {
+            if (purchases.length === 0) return alert('ไม่มีข้อมูลส่งออก');
+            let csv = 'Date,Code,Name,Qty,UnitCost,Total,Supplier\n';
+            purchases.forEach(p => {
+                csv += `"${p.date}","${p.itemCode}","${p.itemName}",${p.qty},${p.unitCost},${p.total},"${p.supplier || ''}"\n`;
+            });
+            const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `purchase_history_${getFormattedDate().replace(/\//g, '-')}.csv`;
+            link.click();
+        }
+
+        function populateCategoryDropdowns() {
+            const catFilter = document.getElementById('inventory-cat-filter');
+            const itemCatForm = document.getElementById('item-form-category');
+            if (catFilter) catFilter.innerHTML = '<option value="ALL">หมวดหมู่ทั้งหมด</option>' + categories.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+            if (itemCatForm) itemCatForm.innerHTML = categories.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+        }
+
+        function renderAllViews() {
+            populateCategoryDropdowns();
+            renderCalendarView();
+            showDayDetails(selectedDateStr);
+            renderInventoryTable();
+            renderDashboard();
+            renderAdjustLogs();
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-message').innerText = msg;
+            toast.classList.remove('opacity-0');
+            toast.classList.add('opacity-100');
+            setTimeout(() => {
+                toast.classList.remove('opacity-100');
+                toast.classList.add('opacity-0');
+            }, 2500);
+        }
+
+        function escapeHtml(str) {
+            return String(str).replace(/[&<>"']/g, function(m) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
+            });
+        }
+
+        document.getElementById('inventory-search')?.addEventListener('input', renderInventoryTable);
+        document.getElementById('inventory-cat-filter')?.addEventListener('change', renderInventoryTable);
+        document.getElementById('inventory-status-filter')?.addEventListener('change', renderInventoryTable);
+
+        window.addEventListener('DOMContentLoaded', () => {
+            loadLocalOrDefaultData();
+            fetchDataFromGoogleSheet(false);
+            switchRole('STAFF');
+        });
+    </script>
+</body>
+</html>
