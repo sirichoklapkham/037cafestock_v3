@@ -304,7 +304,8 @@
     </div>
 
     <script>
-        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxBRae3iGMvhAnYhobr4EwLlFvqWWPnTkyU6SofexyQRx7wbUdC-1ejkaX_kTevqkq4IA/exec';
+        // เปลี่ยนเป็น URL จาก New Deployment ของคุณ
+        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby-c5zJyNh9FnYmT6wCRhPMCntNgxXlLcKuXkdJ6bpLGmxuEJ1bVhbHp8Re5KeyrF1NFQ/exec';
         let googleScriptUrl = DEFAULT_SCRIPT_URL;
 
         const OWNER_PASSWORD = '037cafe';
@@ -328,7 +329,7 @@
             return String(str).toLowerCase().replace(/[\u0300-\u036f]/g, '').replace(/[่้๊๋็์ํ๎]/g, '').replace(/\s+/g, '');
         }
 
-        // แปลงรูปแบบวันที่ทุกรูปแบบให้เป็น DD/MM/YYYY (ค.ศ.) และใส่ศูนย์นำหน้าตัวเลขเสมอ
+        // แปลงรูปแบบวันที่ทุกรูปแบบให้เป็น DD/MM/YYYY (ค.ศ.) เสมอ
         function parseToStandardDateStr(dateInput) {
             if (!dateInput) return '';
             if (dateInput instanceof Date) {
@@ -432,7 +433,7 @@
             try {
                 if (showToastAlert) showToast('กำลังซิงค์ข้อมูลเรียลไทม์...');
                 const res = await fetch(googleScriptUrl + (googleScriptUrl.includes('?') ? '&' : '?') + '_t=' + Date.now(), {
-                    cache: 'no-cache'
+                    cache: 'no-store'
                 });
                 const resData = await res.json();
 
@@ -486,6 +487,7 @@
                 }
             } catch (err) {
                 console.error('Fetch error:', err);
+                if (showToastAlert) showToast('การเชื่อมต่อขัดข้อง');
             }
 
             renderAllViewsWithoutReset();
@@ -493,7 +495,7 @@
 
         function startAutoSync() {
             if (autoSyncTimer) clearInterval(autoSyncTimer);
-            autoSyncTimer = setInterval(() => fetchDataFromGoogleSheet(false), 4000);
+            autoSyncTimer = setInterval(() => fetchDataFromGoogleSheet(false), 5000);
         }
 
         function stopAutoSync() {
@@ -680,7 +682,6 @@
 
             if (!dateTitle || !itemsList) return;
 
-            // กรองรายการโดยใช้รูปแบบวันที่มาตรฐาน DD/MM/YYYY
             const dayPurchases = purchases.filter(p => {
                 const stdP = parseToStandardDateStr(p.date || p.timestamp);
                 return stdP === targetStdDate;
