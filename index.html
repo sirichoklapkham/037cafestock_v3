@@ -292,7 +292,7 @@
 
             <div class="flex justify-end gap-2 pt-2">
                 <button type="button" onclick="closeAdjustModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs rounded-xl">ยกเลิก</button>
-                <button type="button" onclick="submitQuickAdjust()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-4 py-2 text-xs rounded-xl shadow-xs">บันทึก</button>
+                <button type="button" id="btn-submit-adjust" onclick="submitQuickAdjust()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-4 py-2 text-xs rounded-xl shadow-xs">บันทึก</button>
             </div>
         </div>
     </div>
@@ -304,7 +304,7 @@
     </div>
 
     <script>
-        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzIi7Ju9gbd6TOU4tE9GTy2waeEkuCzsfSZQTQIYdqOKJbFJ5BgQ5W1uMEs4p51n6XiAw/exec';
+        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx46NooaGFEtjBan5uSubvYLbzbmIM09_s2v9dBRoeqh8g59lG2Ivd8KW0cqpUsv-vZnA/exec';
         let googleScriptUrl = DEFAULT_SCRIPT_URL;
 
         const OWNER_PASSWORD = '037cafe';
@@ -319,7 +319,7 @@
         let adjustLogs = [];
         let autoSyncTimer = null;
         let isSyncing = false;
-        let isSubmitting = false; // ตัวแปรป้องกัน Auto-sync มาขัดจังหวะช่วงส่งข้อมูล
+        let isSubmitting = false; // Flag ป้องกัน Auto-sync มาเขียนทับ
 
         let calendarCurrentDate = new Date();
         let selectedDateStr = getFormattedDate(); 
@@ -329,7 +329,6 @@
             return String(str).toLowerCase().replace(/[\u0300-\u036f]/g, '').replace(/[่้๊๋็์ํ๎]/g, '').replace(/\s+/g, '');
         }
 
-        // แปลงรูปแบบวันที่ทุกรูปแบบให้เป็น DD/MM/YYYY (ค.ศ.) เสมอ
         function parseToStandardDateStr(dateInput) {
             if (!dateInput) return '';
             
@@ -440,6 +439,7 @@
         }
 
         async function fetchDataFromGoogleSheet(showToastAlert = false) {
+            // ถ้าระบบกำลังส่งข้อมูลลง Google Sheet ให้ข้ามการดึงข้อมูลเพื่อไม่ให้ทับข้อมูลใหม่
             if (!googleScriptUrl || isSyncing || isSubmitting) return;
 
             try {
@@ -533,19 +533,19 @@
             if (!googleScriptUrl) return;
             isSyncing = true;
             try {
+                // ส่งข้อมูล POST
                 await fetch(googleScriptUrl, {
                     method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify({ action, ...payloadData })
                 });
-                
-                // เว้นระยะให้ Google Sheet เพิ่มแถวลงชีทให้เรียบร้อย แล้วค่อยดึงข้อมูลใหม่
-                setTimeout(() => {
+
+                // รอ 2 วินาทีให้ Apps Script บันทึกแถวใหม่ลง Google Sheet เรียบร้อย
+                setTimeout(async () => {
                     isSubmitting = false;
                     isSyncing = false;
-                    fetchDataFromGoogleSheet(false);
-                }, 2500);
+                    await fetchDataFromGoogleSheet(false);
+                }, 2000);
             } catch (err) { 
                 console.error(err); 
                 isSubmitting = false;
@@ -856,7 +856,7 @@
             }
         }
 
-        function submitQuickAdjust() {
+        async function submitQuickAdjust() {
             const itemId = Number(document.getElementById('adjust-select-item').value);
             const qty = Number(document.getElementById('adjust-qty').value);
             const unitCost = Number(document.getElementById('adjust-unit-cost').value) || 0;
@@ -868,7 +868,7 @@
 
             const targetDateStr = selectedDateStr || getFormattedDate();
             
-            // ตั้งค่าสถานะเพื่อระงับ Auto-sync ชั่วคราว
+            // 1. ล็อกระบบ Auto-sync เพื่อไม่ให้ดึงข้อมูลทับ
             isSubmitting = true;
 
             const now = new Date();
@@ -878,13 +878,13 @@
             const timeStr = `${hh}:${mm}:${ssVal}`;
             const fullTimestampStr = `${targetDateStr} ${timeStr}`;
 
-            // 1. อัปเดตข้อมูลสินค้าใน Local ทันที (Optimistic UI)
+            // 2. อัปเดต UI Local State ทันที
             if (selectedAdjustType === 'ADD') {
                 item.stock = Number(item.stock) + qty;
                 if (unitCost > 0) item.lastCost = unitCost;
                 
                 purchases.push({
-                    id: purchases.length + 1,
+                    id: Date.now(),
                     date: targetDateStr,
                     timestamp: fullTimestampStr,
                     itemCode: item.code,
@@ -898,7 +898,7 @@
                 item.stock = Math.max(0, Number(item.stock) - qty);
                 
                 adjustLogs.push({
-                    id: adjustLogs.length + 1,
+                    id: Date.now(),
                     date: targetDateStr,
                     timestamp: fullTimestampStr,
                     itemCode: item.code,
@@ -909,14 +909,15 @@
                 });
             }
 
+            // 3. บันทึกลง LocalStorage และแสดงผลบนปฏิทินทันที
             saveToLocalStorage();
             renderAllViewsWithoutReset();
 
             closeAdjustModal();
-            showToast('บันทึกลงปฏิทินสำเร็จ และกำลังส่งไป Google Sheet...');
+            showToast('บันทึกลงปฏิทินสำเร็จ กำลังส่งลง Sheet...');
 
-            // 2. ส่งข้อมูลไปยัง Google Sheet
-            syncItemToGoogleSheet('quickAdjust', { 
+            // 4. นำส่งข้อมูลลง Google Sheet
+            await syncItemToGoogleSheet('quickAdjust', { 
                 date: targetDateStr, 
                 code: item.code, 
                 name: item.name, 
