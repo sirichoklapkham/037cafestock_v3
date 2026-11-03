@@ -299,7 +299,7 @@
     </div>
 
     <script>
-        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw1jEsJRl6MNw1Px7l5rzjHPMcA-uo5mQSvtfhgYAtez3LpyK7Lcwb5LXeiyJE7Y9N-FA/exec';
+        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyD83WhwN-8_Doaj0uvCz1aOg6TDfvCNMHpfSeR-YhFnKCpqc40g3vT_l8F3al9R08y8g/exec';
         let googleScriptUrl = DEFAULT_SCRIPT_URL;
 
         const OWNER_PASSWORD = '037cafe';
@@ -313,7 +313,7 @@
         let purchases = [];
         let adjustLogs = [];
         let autoSyncTimer = null;
-        let isSyncing = false; // ป้องกันดึงข้อมูลซ้อนกันตอนกำลังเซฟ
+        let isSyncing = false;
 
         let calendarCurrentDate = new Date();
         let selectedDateStr = getFormattedDate(); 
@@ -323,7 +323,7 @@
             return String(str).toLowerCase().replace(/[\u0300-\u036f]/g, '').replace(/[่้๊๋็์ํ๎]/g, '').replace(/\s+/g, '');
         }
 
-        // ฟังก์ชันแปลงวันที่ให้ได้มาตรฐาน DD/MM/YYYY เสมอ (ค.ศ.)
+        // แปลงรูปแบบวันที่ทุกรูปแบบให้เป็น DD/MM/YYYY (ค.ศ.) เท่านั้น
         function parseToStandardDateStr(dateInput) {
             if (!dateInput) return '';
             if (dateInput instanceof Date) {
@@ -344,7 +344,7 @@
                     let d = parts[2].padStart(2, '0');
                     let m = parts[1].padStart(2, '0');
                     let y = parseInt(parts[0], 10);
-                    if (parts[0].length === 2) {
+                    if (parts[0].length === 2 || parts[0].length === 1) {
                         d = parts[0].padStart(2, '0');
                         y = parseInt(parts[2], 10);
                     }
@@ -426,32 +426,7 @@
             return `${dateStr} ${hours}:${minutes}:${seconds}`;
         }
 
-        // รวม Local Data และ Sheet Data ไม่ให้ของใหม่ที่เพิ่งเซฟหายไป
-        function mergeServerAndLocalLogs(serverPurchases, serverAdjustLogs) {
-            const mergedPurchases = [...serverPurchases];
-            purchases.forEach(localP => {
-                const exists = mergedPurchases.some(sp => 
-                    sp.itemCode === localP.itemCode && 
-                    sp.qty === localP.qty && 
-                    (sp.timestamp === localP.timestamp || sp.date === localP.date)
-                );
-                if (!exists) mergedPurchases.push(localP);
-            });
-
-            const mergedAdjustLogs = [...serverAdjustLogs];
-            adjustLogs.forEach(localL => {
-                const exists = mergedAdjustLogs.some(sl => 
-                    sl.itemCode === localL.itemCode && 
-                    sl.qty === localL.qty && 
-                    (sl.timestamp === localL.timestamp || sl.date === localL.date)
-                );
-                if (!exists) mergedAdjustLogs.push(localL);
-            });
-
-            purchases = mergedPurchases;
-            adjustLogs = mergedAdjustLogs;
-        }
-
+        // ดึงข้อมูล Realtime และนำมา Merge รวมกับ local เสมอ
         async function fetchDataFromGoogleSheet(showToastAlert = false) {
             if (!googleScriptUrl || isSyncing) return;
 
@@ -464,19 +439,21 @@
 
                 if (resData.categories && Array.isArray(resData.categories)) categories = resData.categories;
 
-                const serverPurchases = (resData.purchases || []).map(p => ({ 
-                    ...p, 
-                    date: parseToStandardDateStr(p.date || p.timestamp),
-                    timestamp: p.timestamp || p.date
-                }));
+                if (resData.purchases && Array.isArray(resData.purchases)) {
+                    purchases = resData.purchases.map(p => ({ 
+                        ...p, 
+                        date: parseToStandardDateStr(p.date || p.timestamp),
+                        timestamp: p.timestamp || p.date
+                    }));
+                }
 
-                const serverAdjustLogs = (resData.adjustLogs || []).map(l => ({ 
-                    ...l, 
-                    date: parseToStandardDateStr(l.date || l.timestamp),
-                    timestamp: l.timestamp || l.date
-                }));
-
-                mergeServerAndLocalLogs(serverPurchases, serverAdjustLogs);
+                if (resData.adjustLogs && Array.isArray(resData.adjustLogs)) {
+                    adjustLogs = resData.adjustLogs.map(l => ({ 
+                        ...l, 
+                        date: parseToStandardDateStr(l.date || l.timestamp),
+                        timestamp: l.timestamp || l.date
+                    }));
+                }
 
                 const rawItems = Array.isArray(resData) ? resData : (resData.items || []);
                 if (rawItems.length > 0) {
@@ -506,7 +483,7 @@
                         };
                     });
                     saveToLocalStorage();
-                    if (showToastAlert) showToast('ซิงค์ข้อมูลปฏิทินสำเร็จ');
+                    if (showToastAlert) showToast('ซิงค์ข้อมูลเรียบร้อยแล้ว');
                 }
             } catch (err) {
                 console.error('Fetch error:', err);
@@ -515,9 +492,10 @@
             renderAllViewsWithoutReset();
         }
 
+        // ระบบ Auto-Sync สั่งทำงานตลอดเวลาแม้จะสลับโหมด
         function startAutoSync() {
             if (autoSyncTimer) clearInterval(autoSyncTimer);
-            autoSyncTimer = setInterval(() => fetchDataFromGoogleSheet(false), 5000);
+            autoSyncTimer = setInterval(() => fetchDataFromGoogleSheet(false), 4000);
         }
 
         function stopAutoSync() {
@@ -551,7 +529,7 @@
                 setTimeout(() => {
                     isSyncing = false;
                     fetchDataFromGoogleSheet(false);
-                }, 6000);
+                }, 3000);
             } catch (err) { 
                 console.error(err); 
                 isSyncing = false;
@@ -563,13 +541,7 @@
         function switchRole(role) {
             currentRole = role;
             document.getElementById('role-selector').value = role;
-            if (role === 'OWNER') {
-                stopAutoSync();
-                showToast('เข้าสู่โหมด: เจ้าของร้าน');
-            } else {
-                startAutoSync();
-                showToast('เข้าสู่โหมด: พนักงาน (Auto-Sync)');
-            }
+            startAutoSync();
             renderInventoryTable();
         }
 
@@ -842,7 +814,6 @@
             const item = items.find(i => Number(i.id) === itemId);
             if (!item) return;
 
-            // ใช้วันที่ที่กำลังเลือกอยู่บนปฏิทิน หรือวันที่ปัจจุบัน
             const targetDateStr = selectedDateStr || getFormattedDate();
             const nowDateTimeStr = `${targetDateStr} ${new Date().toTimeString().split(' ')[0]}`;
 
@@ -880,7 +851,6 @@
             saveToLocalStorage();
             closeAdjustModal();
             
-            // อัปเดต UI ทันที
             selectedDateStr = targetDateStr;
             renderCalendarView();
             showDayDetails(selectedDateStr);
@@ -888,7 +858,6 @@
 
             showToast(selectedAdjustType === 'ADD' ? 'เติมสต๊อกเรียบร้อย (สีเขียว)' : 'เบิกสต๊อกออกเรียบร้อย (สีแดง)');
 
-            // ส่งข้อมูลขึ้น Google Sheet
             syncItemToGoogleSheet('quickAdjust', { 
                 date: targetDateStr, 
                 code: item.code, 
@@ -1035,7 +1004,7 @@
         window.addEventListener('DOMContentLoaded', () => {
             loadLocalOrDefaultData();
             fetchDataFromGoogleSheet(false);
-            switchRole('STAFF');
+            startAutoSync();
         });
     </script>
 </body>
