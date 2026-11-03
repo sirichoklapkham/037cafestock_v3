@@ -299,7 +299,7 @@
     </div>
 
     <script>
-        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyP0T--TWARGBwRnALc15FDYIPIIQsWH8gwN05GUzAGhR7O1_l4ZrmB73e4toTice-HRA/exec';
+        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbydyMJzDlTjmKPauGVANCYOaL12DxkiegueLVqqIibz4CMVDv93S12YgDEfLDqs8kDTsw/exec';
         let googleScriptUrl = DEFAULT_SCRIPT_URL;
 
         const OWNER_PASSWORD = '037cafe';
@@ -323,7 +323,7 @@
             return String(str).toLowerCase().replace(/[\u0300-\u036f]/g, '').replace(/[่้๊๋็์ํ๎]/g, '').replace(/\s+/g, '');
         }
 
-        // แปลงรูปแบบวันที่ทุกรูปแบบให้เป็น DD/MM/YYYY (ค.ศ.) เท่านั้น
+        // แปลงรูปแบบวันที่ทุกรูปแบบให้เป็น DD/MM/YYYY (ค.ศ.)
         function parseToStandardDateStr(dateInput) {
             if (!dateInput) return '';
             if (dateInput instanceof Date) {
@@ -426,7 +426,7 @@
             return `${dateStr} ${hours}:${minutes}:${seconds}`;
         }
 
-        // ดึงข้อมูล Realtime จาก Google Sheet โดยตรง
+        // ดึงข้อมูล Realtime จาก Google Sheet
         async function fetchDataFromGoogleSheet(showToastAlert = false) {
             if (!googleScriptUrl || isSyncing) return;
 
@@ -492,7 +492,6 @@
             renderAllViewsWithoutReset();
         }
 
-        // ระบบ Auto-Sync ทำงานตลอดเวลาทุกๆ 4 วินาที
         function startAutoSync() {
             if (autoSyncTimer) clearInterval(autoSyncTimer);
             autoSyncTimer = setInterval(() => fetchDataFromGoogleSheet(false), 4000);
@@ -666,16 +665,8 @@
 
             if (!dateTitle || !itemsList) return;
 
-            // กรองรายการเติมเข้าและเบิกออกที่ตรงกับวันที่ที่เลือก
-            const dayPurchases = purchases.filter(p => {
-                const stdDate = parseToStandardDateStr(p.date || p.timestamp);
-                return stdDate === selectedDateStr;
-            });
-
-            const dayLogs = adjustLogs.filter(l => {
-                const stdDate = parseToStandardDateStr(l.date || l.timestamp);
-                return stdDate === selectedDateStr;
-            });
+            const dayPurchases = purchases.filter(p => parseToStandardDateStr(p.date || p.timestamp) === selectedDateStr);
+            const dayLogs = adjustLogs.filter(l => parseToStandardDateStr(l.date || l.timestamp) === selectedDateStr);
 
             const totalSum = dayPurchases.reduce((sum, p) => sum + Number(p.total || 0), 0);
 
@@ -713,7 +704,7 @@
                 });
             });
 
-            // จัดเรียงลำดับเวลา (Timestamp) จากล่าสุดไปเก่าที่สุด
+            // เรียงจากเวลาล่าสุดไปหาเวลาเก่าที่สุด
             combinedList.sort((a, b) => b.timeMs - a.timeMs);
 
             if (combinedList.length === 0) {
@@ -828,7 +819,6 @@
             closeAdjustModal();
             showToast('กำลังบันทึกลง Google Sheet...');
 
-            // ส่งข้อมูลไปบันทึกยัง Google Sheet ตรงๆ โดยไม่บันทึกลงเว็บแอปก่อน
             syncItemToGoogleSheet('quickAdjust', { 
                 date: targetDateStr, 
                 code: item.code, 
@@ -972,7 +962,6 @@
         document.getElementById('inventory-cat-filter')?.addEventListener('change', renderInventoryTable);
         document.getElementById('inventory-status-filter')?.addEventListener('change', renderInventoryTable);
 
-        // เมื่อโหลดหน้าเว็บ ให้ดึงข้อมูลอัตโนมัติก่อน 1 รอบ และเปิด Auto Sync
         window.addEventListener('DOMContentLoaded', () => {
             loadLocalOrDefaultData();
             fetchDataFromGoogleSheet(false);
