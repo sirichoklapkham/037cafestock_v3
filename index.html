@@ -299,7 +299,7 @@
     </div>
 
     <script>
-        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbydyMJzDlTjmKPauGVANCYOaL12DxkiegueLVqqIibz4CMVDv93S12YgDEfLDqs8kDTsw/exec';
+        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxuwG0kSI7oiv7fOClvTjtfQw40HQSyPsgqPwsIVfazZyTuh87aL7AEJlt8Ig8WmoMq/exec';
         let googleScriptUrl = DEFAULT_SCRIPT_URL;
 
         const OWNER_PASSWORD = '037cafe';
@@ -417,15 +417,6 @@
             return parseToStandardDateStr(d);
         }
 
-        function getFormattedDateTime() {
-            const d = new Date();
-            const dateStr = parseToStandardDateStr(d);
-            const hours = String(d.getHours()).padStart(2, '0');
-            const minutes = String(d.getMinutes()).padStart(2, '0');
-            const seconds = String(d.getSeconds()).padStart(2, '0');
-            return `${dateStr} ${hours}:${minutes}:${seconds}`;
-        }
-
         // ดึงข้อมูล Realtime จาก Google Sheet
         async function fetchDataFromGoogleSheet(showToastAlert = false) {
             if (!googleScriptUrl || isSyncing) return;
@@ -528,7 +519,7 @@
                 setTimeout(() => {
                     isSyncing = false;
                     fetchDataFromGoogleSheet(false);
-                }, 2500);
+                }, 2000);
             } catch (err) { 
                 console.error(err); 
                 isSyncing = false;
