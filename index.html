@@ -115,11 +115,6 @@
                         <button onclick="changeCalendarMonth(-1)" class="w-7 h-7 bg-slate-100 hover:bg-slate-200 rounded-full flex items-center justify-center text-slate-600 text-xs"><i class="fa-solid fa-chevron-left"></i></button>
                         <button onclick="changeCalendarMonth(1)" class="w-7 h-7 bg-slate-100 hover:bg-slate-200 rounded-full flex items-center justify-center text-slate-600 text-xs"><i class="fa-solid fa-chevron-right"></i></button>
                         <button onclick="resetCalendarToCurrent()" class="px-2.5 py-1 bg-slate-900 text-amber-400 text-[10px] font-semibold rounded-lg ml-1">วันนี้</button>
-                        
-                        <button onclick="fetchDataFromGoogleSheet(true, true)" class="px-2.5 py-1 bg-amber-500 text-slate-950 text-[10px] font-bold rounded-lg ml-1 flex items-center gap-1 hover:bg-amber-400 transition">
-                            <i class="fa-solid fa-rotate text-[10px]"></i>
-                            <span>ดึงข้อมูลปฏิทิน</span>
-                        </button>
                     </div>
                 </div>
 
@@ -439,7 +434,7 @@
         }
 
         async function fetchDataFromGoogleSheet(showToastAlert = false, forceManual = false) {
-            // หากเป็นการ Auto-Sync (forceManual = false) แล้วผู้ใช้กำลังเปิดแท็บ "ปฏิทิน" ให้ยกเลิกการดึงข้อมูลทับทันที
+            // ป้องกัน Auto-Sync ทับหน้าปฏิทิน
             if (!forceManual && activeTabId === 'calendar') return;
             if (!googleScriptUrl || isSyncing || isSubmitting) return;
 
@@ -510,7 +505,7 @@
         function startAutoSync() {
             if (autoSyncTimer) clearInterval(autoSyncTimer);
             autoSyncTimer = setInterval(() => {
-                // ปิดการเรียก Auto-Sync เมื่ออยู่หน้าปฏิทิน
+                // ปิดการเรียก Auto-Sync เมื่อเปิดหน้าปฏิทินอยู่
                 if (activeTabId !== 'calendar') {
                     fetchDataFromGoogleSheet(false, false);
                 }
@@ -548,7 +543,6 @@
                 setTimeout(async () => {
                     isSubmitting = false;
                     isSyncing = false;
-                    // ดึงข้อมูลซิงค์กลับเฉพาะเมื่อไม่ได้เปิดหน้าปฏิทิน
                     if (activeTabId !== 'calendar') {
                         await fetchDataFromGoogleSheet(false, false);
                     }
@@ -584,7 +578,6 @@
                 renderCalendarView();
                 showDayDetails(selectedDateStr);
             } else {
-                // หากเปลี่ยนไปหน้าอื่น ให้ดึงข้อมูลล่าสุดของหน้านั้นทันที
                 fetchDataFromGoogleSheet(false, false);
             }
 
@@ -1070,7 +1063,7 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             loadLocalOrDefaultData();
-            // เมื่อเปิดเว็บ โหลดข้อมูลครั้งแรก
+            // โหลดข้อมูลจาก Google Sheet ครั้งแรกเมื่อเปิดหน้าเว็บ
             fetchDataFromGoogleSheet(false, true);
             startAutoSync();
         });
