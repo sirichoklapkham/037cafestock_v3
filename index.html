@@ -304,8 +304,7 @@
     </div>
 
     <script>
-        // ใส่ URL ที่ได้จาก New Deployment ของ Apps Script
-        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz68FYNwJfZadp5ZXKF-oFJYwNa8QAjaVoYejH-A8IY5aWhgbg-y0o2QE9qBPKuHDCt5g/exec';
+        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzcrQHAXFa0nAFi41pjxa9SCXzua8X3VYc5dLPCrAyapszi8H_7APy9wliPRE03NDAcUg/exec';
         let googleScriptUrl = DEFAULT_SCRIPT_URL;
 
         const OWNER_PASSWORD = '037cafe';
@@ -329,7 +328,7 @@
             return String(str).toLowerCase().replace(/[\u0300-\u036f]/g, '').replace(/[่้๊๋็์ํ๎]/g, '').replace(/\s+/g, '');
         }
 
-        // แปลงรูปแบบวันที่ทุกรูปแบบให้เป็น DD/MM/YYYY (ค.ศ.) เสมอ รองรับทั้ง พ.ศ. และศูนย์นำหน้า
+        // แปลงรูปแบบวันที่ทุกรูปแบบให้เป็น DD/MM/YYYY (ค.ศ.) เสมอ
         function parseToStandardDateStr(dateInput) {
             if (!dateInput) return '';
             
@@ -439,7 +438,6 @@
             return parseToStandardDateStr(d);
         }
 
-        // ดึงข้อมูล Realtime จาก Google Sheet
         async function fetchDataFromGoogleSheet(showToastAlert = false) {
             if (!googleScriptUrl || isSyncing) return;
 
@@ -752,6 +750,8 @@
                     let timeShow = '';
                     if (item.timestampStr && item.timestampStr.includes(' ')) {
                         timeShow = item.timestampStr.split(' ')[1];
+                    } else if (item.timestampStr) {
+                        timeShow = item.timestampStr;
                     }
 
                     const isAdd = (item.logType === 'PURCHASE' || item.logType === 'ADD');
