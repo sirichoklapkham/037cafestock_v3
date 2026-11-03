@@ -116,7 +116,6 @@
                         <button onclick="changeCalendarMonth(1)" class="w-7 h-7 bg-slate-100 hover:bg-slate-200 rounded-full flex items-center justify-center text-slate-600 text-xs"><i class="fa-solid fa-chevron-right"></i></button>
                         <button onclick="resetCalendarToCurrent()" class="px-2.5 py-1 bg-slate-900 text-amber-400 text-[10px] font-semibold rounded-lg ml-1">วันนี้</button>
                         
-                        <!-- ปุ่มดึงข้อมูลปฏิทินสีส้ม -->
                         <button onclick="fetchDataFromGoogleSheet(true)" class="px-2.5 py-1 bg-amber-500 text-slate-950 text-[10px] font-bold rounded-lg ml-1 flex items-center gap-1 hover:bg-amber-400 transition">
                             <i class="fa-solid fa-rotate text-[10px]"></i>
                             <span>ดึงข้อมูลปฏิทิน</span>
@@ -304,7 +303,7 @@
     </div>
 
     <script>
-        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx46NooaGFEtjBan5uSubvYLbzbmIM09_s2v9dBRoeqh8g59lG2Ivd8KW0cqpUsv-vZnA/exec';
+        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwUsLeRe7ObpBPoFPRBHLTqXOhHPWTM62Hgx9JF9JER3jB8qs9bbmNBwW-Rml3_rc-xGw/exec';
         let googleScriptUrl = DEFAULT_SCRIPT_URL;
 
         const OWNER_PASSWORD = '037cafe';
@@ -319,7 +318,7 @@
         let adjustLogs = [];
         let autoSyncTimer = null;
         let isSyncing = false;
-        let isSubmitting = false; // Flag ป้องกัน Auto-sync มาเขียนทับ
+        let isSubmitting = false;
 
         let calendarCurrentDate = new Date();
         let selectedDateStr = getFormattedDate(); 
@@ -329,6 +328,7 @@
             return String(str).toLowerCase().replace(/[\u0300-\u036f]/g, '').replace(/[่้๊๋็์ํ๎]/g, '').replace(/\s+/g, '');
         }
 
+        // แปลงรูปแบบวันที่ทุกชนิดให้เป็น DD/MM/YYYY
         function parseToStandardDateStr(dateInput) {
             if (!dateInput) return '';
             
@@ -373,7 +373,7 @@
                         y = parseInt(parts[0], 10);
                         m = parts[1].padStart(2, '0');
                         d = parts[2].padStart(2, '0');
-                    } else { // Standard DD/MM/YYYY
+                    } else {
                         d = parts[0].padStart(2, '0');
                         m = parts[1].padStart(2, '0');
                         y = parseInt(parts[2], 10);
@@ -439,7 +439,6 @@
         }
 
         async function fetchDataFromGoogleSheet(showToastAlert = false) {
-            // ถ้าระบบกำลังส่งข้อมูลลง Google Sheet ให้ข้ามการดึงข้อมูลเพื่อไม่ให้ทับข้อมูลใหม่
             if (!googleScriptUrl || isSyncing || isSubmitting) return;
 
             try {
@@ -454,7 +453,7 @@
                 if (resData.purchases && Array.isArray(resData.purchases)) {
                     purchases = resData.purchases.map(p => ({ 
                         ...p, 
-                        date: parseToStandardDateStr(p.date || p.timestamp),
+                        date: parseToStandardDateStr(p.date),
                         timestamp: p.timestamp || p.date
                     }));
                 }
@@ -462,7 +461,7 @@
                 if (resData.adjustLogs && Array.isArray(resData.adjustLogs)) {
                     adjustLogs = resData.adjustLogs.map(l => ({ 
                         ...l, 
-                        date: parseToStandardDateStr(l.date || l.timestamp),
+                        date: parseToStandardDateStr(l.date),
                         timestamp: l.timestamp || l.date
                     }));
                 }
@@ -533,14 +532,12 @@
             if (!googleScriptUrl) return;
             isSyncing = true;
             try {
-                // ส่งข้อมูล POST
                 await fetch(googleScriptUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify({ action, ...payloadData })
                 });
 
-                // รอ 2 วินาทีให้ Apps Script บันทึกแถวใหม่ลง Google Sheet เรียบร้อย
                 setTimeout(async () => {
                     isSubmitting = false;
                     isSyncing = false;
@@ -615,7 +612,7 @@
             const dailyHasExpense = {};
 
             purchases.forEach(p => {
-                const pDateStr = parseToStandardDateStr(p.date || p.timestamp);
+                const pDateStr = parseToStandardDateStr(p.date);
                 if (pDateStr) {
                     const pDateObj = parseDMYToDateObj(pDateStr);
                     if (pDateObj && pDateObj.getFullYear() === year && pDateObj.getMonth() === month) {
@@ -628,7 +625,7 @@
             });
 
             adjustLogs.forEach(l => {
-                const logDate = parseToStandardDateStr(l.date || l.timestamp);
+                const logDate = parseToStandardDateStr(l.date);
                 if (logDate) {
                     const lDateObj = parseDMYToDateObj(logDate);
                     if (lDateObj && lDateObj.getFullYear() === year && lDateObj.getMonth() === month) {
@@ -700,12 +697,12 @@
             if (!dateTitle || !itemsList) return;
 
             const dayPurchases = purchases.filter(p => {
-                const stdP = parseToStandardDateStr(p.date || p.timestamp);
+                const stdP = parseToStandardDateStr(p.date);
                 return stdP === targetStdDate;
             });
             
             const dayLogs = adjustLogs.filter(l => {
-                const stdL = parseToStandardDateStr(l.date || l.timestamp);
+                const stdL = parseToStandardDateStr(l.date);
                 return stdL === targetStdDate;
             });
 
@@ -868,7 +865,7 @@
 
             const targetDateStr = selectedDateStr || getFormattedDate();
             
-            // 1. ล็อกระบบ Auto-sync เพื่อไม่ให้ดึงข้อมูลทับ
+            // ล็อกระบบ Auto-sync
             isSubmitting = true;
 
             const now = new Date();
@@ -878,7 +875,6 @@
             const timeStr = `${hh}:${mm}:${ssVal}`;
             const fullTimestampStr = `${targetDateStr} ${timeStr}`;
 
-            // 2. อัปเดต UI Local State ทันที
             if (selectedAdjustType === 'ADD') {
                 item.stock = Number(item.stock) + qty;
                 if (unitCost > 0) item.lastCost = unitCost;
@@ -909,14 +905,12 @@
                 });
             }
 
-            // 3. บันทึกลง LocalStorage และแสดงผลบนปฏิทินทันที
             saveToLocalStorage();
             renderAllViewsWithoutReset();
 
             closeAdjustModal();
             showToast('บันทึกลงปฏิทินสำเร็จ กำลังส่งลง Sheet...');
 
-            // 4. นำส่งข้อมูลลง Google Sheet
             await syncItemToGoogleSheet('quickAdjust', { 
                 date: targetDateStr, 
                 code: item.code, 
@@ -990,7 +984,7 @@
 
             const now = new Date();
             const monthTotal = purchases.filter(p => {
-                const pDate = parseDMYToDateObj(p.date || p.timestamp);
+                const pDate = parseDMYToDateObj(p.date);
                 return pDate && (pDate.getMonth() + 1) === (now.getMonth() + 1) && pDate.getFullYear() === now.getFullYear();
             }).reduce((sum, p) => sum + Number(p.total || 0), 0);
             document.getElementById('stat-month-expense').innerText = `฿${monthTotal.toLocaleString('th-TH')}`;
