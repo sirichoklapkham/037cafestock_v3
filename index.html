@@ -232,7 +232,7 @@
 
     </main>
 
-    <!-- Bottom Navigation Bar (สลับสีปุ่มแล้ว: เติมสต๊อก=เขียว, เบิกออก=แดง) -->
+    <!-- Bottom Navigation Bar -->
     <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-40 pb-safe shadow-lg">
         <div class="max-w-md mx-auto grid grid-cols-4 items-center justify-items-center py-2 px-1">
             <button onclick="switchTab('calendar')" id="nav-calendar" class="nav-btn flex flex-col items-center justify-center w-full py-1 text-amber-500 font-semibold">
@@ -334,7 +334,7 @@
     </div>
 
     <script>
-        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwY8o6gyedGKpZpU95kTkeCUC13oeXtFvf1SFeJLeBuawByBKUYFu2jqJ4CVQbKNgTgZQ/exec';
+        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxXa-BiO6XkQgH-8e8Gb8LZaO30svovO4UUrAszBwv4CWsgttlID1qNrHgyZXFSvqLRDg/exec';
         let googleScriptUrl = DEFAULT_SCRIPT_URL;
 
         const OWNER_PASSWORD = '037cafe';
@@ -358,7 +358,7 @@
             return String(str).toLowerCase().replace(/[\u0300-\u036f]/g, '').replace(/[่้๊๋็์ํ๎]/g, '').replace(/\s+/g, '');
         }
 
-        // แปลงวันที่ให้อยู่ในฟอร์แมต DD/MM/YYYY เดียวกันทุกแพลตฟอร์ม (แปลง พ.ศ. เป็น ค.ศ. อัตโนมัติ)
+        // แปลงวันที่ให้อยู่ในฟอร์แมต DD/MM/YYYY เสมอ (แปลง พ.ศ. เป็น ค.ศ. อัตโนมัติ)
         function parseToStandardDateStr(dateInput) {
             if (!dateInput) return '';
             if (dateInput instanceof Date) {
@@ -370,6 +370,7 @@
                 return `${d}/${m}/${y}`;
             }
             let str = String(dateInput).trim();
+            if (str.includes(' ')) str = str.split(' ')[0]; // ตัดเวลาข้างหลังออกเพื่อเปรียบเทียบเฉพาะวันที่
             if (str.includes('T')) str = str.split('T')[0];
             
             if (str.includes('-')) {
@@ -427,7 +428,10 @@
                 if (resData.categories && Array.isArray(resData.categories)) categories = resData.categories;
 
                 if (resData.purchases && Array.isArray(resData.purchases)) {
-                    purchases = resData.purchases.map(p => ({ ...p, date: parseToStandardDateStr(p.date) }));
+                    purchases = resData.purchases.map(p => ({ 
+                        ...p, 
+                        date: parseToStandardDateStr(p.date || p.timestamp) 
+                    }));
                     purchases.sort((a, b) => parseDMYToDateObj(b.date) - parseDMYToDateObj(a.date));
                 }
 
@@ -472,6 +476,7 @@
                 if (showToastAlert) loadLocalOrDefaultData();
             }
 
+            // อัปเดตการแสดงผลในหน้าจอโดยคงวันที่ที่เลือกอยู่ไว้
             renderAllViews();
         }
 
@@ -604,8 +609,9 @@
             const dailyHasSub = {};
 
             purchases.forEach(p => {
-                if (p.date) {
-                    const pDateObj = parseDMYToDateObj(p.date);
+                const pDateStr = p.date || parseToStandardDateStr(p.timestamp);
+                if (pDateStr) {
+                    const pDateObj = parseDMYToDateObj(pDateStr);
                     if (pDateObj && pDateObj.getFullYear() === year && pDateObj.getMonth() === month) {
                         const d = pDateObj.getDate();
                         dailyTotals[d] = (dailyTotals[d] || 0) + Number(p.total || 0);
@@ -665,13 +671,17 @@
         }
 
         function showDayDetails(dateStr) {
+            if (!dateStr) dateStr = selectedDateStr;
             selectedDateStr = parseToStandardDateStr(dateStr);
+
             const dateTitle = document.getElementById('detail-date-title');
             const totalDisplay = document.getElementById('detail-total-amount');
             const countBadge = document.getElementById('detail-count-badge');
             const itemsList = document.getElementById('detail-items-list');
 
-            const dayPurchases = purchases.filter(p => parseToStandardDateStr(p.date) === selectedDateStr);
+            if (!dateTitle || !itemsList) return;
+
+            const dayPurchases = purchases.filter(p => parseToStandardDateStr(p.date || p.timestamp) === selectedDateStr);
             const dayLogs = adjustLogs.filter(l => parseToStandardDateStr(l.date || l.timestamp) === selectedDateStr);
 
             const totalSum = dayPurchases.reduce((sum, p) => sum + Number(p.total || 0), 0);
@@ -694,7 +704,7 @@
                                     <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
                                     ${escapeHtml(p.itemName)} <span class="text-[10px] text-slate-400 font-mono">(${escapeHtml(p.itemCode)})</span>
                                 </p>
-                                <p class="text-[10px] text-slate-400">เติมเข้า +${p.qty} | ต้นทุน: ฿${Number(p.unitCost).toFixed(2)} | หมายเหตุ: ${escapeHtml(p.supplier || '-')}</p>
+                                <p class="text-[10px] text-slate-400">เติมเข้า +${p.qty} | ต้นทุน: ฿${Number(p.unitCost).toFixed(2)} | เวลา/หมายเหตุ: ${escapeHtml(p.timestamp || p.supplier || '-')}</p>
                             </div>
                             <span class="font-bold text-emerald-400">฿${Number(p.total).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
                         </div>
@@ -794,15 +804,16 @@
             if (!item) return;
 
             const todayDateStr = getFormattedDate();
+            const nowDateTimeStr = getFormattedDateTime();
 
             if (selectedAdjustType === 'ADD') {
                 item.stock += qty;
                 item.lastCost = unitCost;
-                purchases.unshift({ id: Date.now(), date: todayDateStr, itemId: item.id, itemName: item.name, itemCode: item.code, unitCost: unitCost, qty: qty, unit: item.unit, total: qty * unitCost, supplier: reason });
+                purchases.unshift({ id: Date.now(), timestamp: nowDateTimeStr, date: todayDateStr, itemId: item.id, itemName: item.name, itemCode: item.code, unitCost: unitCost, qty: qty, unit: item.unit, total: qty * unitCost, supplier: reason });
             } else {
                 if (item.stock < qty) return alert('สต๊อกคงเหลือไม่พอสำหรับการเบิกออก');
                 item.stock -= qty;
-                adjustLogs.unshift({ id: Date.now(), timestamp: getFormattedDateTime(), date: todayDateStr, itemId: item.id, itemName: item.name, itemCode: item.code, type: selectedAdjustType, qty: qty, unit: item.unit, reason: reason });
+                adjustLogs.unshift({ id: Date.now(), timestamp: nowDateTimeStr, date: todayDateStr, itemId: item.id, itemName: item.name, itemCode: item.code, type: selectedAdjustType, qty: qty, unit: item.unit, reason: reason });
             }
 
             saveToLocalStorage();
@@ -875,7 +886,7 @@
 
             const now = new Date();
             const monthTotal = purchases.filter(p => {
-                const pDate = parseDMYToDateObj(p.date);
+                const pDate = parseDMYToDateObj(p.date || p.timestamp);
                 return pDate && (pDate.getMonth() + 1) === (now.getMonth() + 1) && pDate.getFullYear() === now.getFullYear();
             }).reduce((sum, p) => sum + Number(p.total || 0), 0);
             document.getElementById('stat-month-expense').innerText = `฿${monthTotal.toLocaleString('th-TH')}`;
