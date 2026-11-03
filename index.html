@@ -333,7 +333,7 @@
     </div>
 
     <script>
-        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyLLvUd7F562tqyXjWuMlwPX-Woc-JJbS-4CIW0X_wcYcJHhcugMrViQLlQIF1jiAVtgQ/exec';
+        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxugPOIH7R4lhHUaZdUNqkQISMreQHgE1KC7RvxmPWkCn-epM_S18MH16xoOWWjrpPVYQ/exec';
         let googleScriptUrl = DEFAULT_SCRIPT_URL;
 
         const OWNER_PASSWORD = '037cafe';
@@ -451,7 +451,7 @@
             return `${dateStr} ${hours}:${minutes}:${seconds}`;
         }
 
-        // ดึงข้อมูลตรงจาก Google Sheet
+        // ดึงข้อมูลตรงจาก Google Sheet และป้องกันการรีเซ็ทปฏิทิน
         async function fetchDataFromGoogleSheet(showToastAlert = false) {
             if (!googleScriptUrl) return;
 
@@ -514,7 +514,8 @@
                 console.error('Fetch error:', err);
             }
 
-            renderAllViews();
+            // อัปเดตมุมมองโดยยังคงรักษาวันที่และเดือนที่กำลังเปิดดูอยู่ ไม่ให้ถูกรีเซ็ท
+            renderAllViewsWithoutReset();
         }
 
         function startAutoSync() {
@@ -572,7 +573,7 @@
             }
 
             saveToLocalStorage();
-            renderAllViews();
+            renderAllViewsWithoutReset();
             showToast('ลบรายการเรียบร้อยแล้ว');
 
             syncItemToGoogleSheet('deleteLog', { logType, itemCode, timestamp, qty });
@@ -909,7 +910,7 @@
 
             saveToLocalStorage();
             closeAdjustModal();
-            renderAllViews();
+            renderAllViewsWithoutReset();
             showToast(selectedAdjustType === 'ADD' ? 'เติมสต๊อกเรียบร้อย (สีเขียว)' : 'เบิกสต๊อกออกเรียบร้อย (สีแดง)');
 
             syncItemToGoogleSheet('quickAdjust', { date: todayDateStr, code: item.code, name: item.name, type: selectedAdjustType, qty: qty, unitCost: unitCost, reason: reason });
@@ -1023,13 +1024,14 @@
             if (catFilter) catFilter.innerHTML = '<option value="ALL">หมวดหมู่ทั้งหมด</option>' + categories.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
         }
 
-        function renderAllViews() {
+        // ฟังก์ชัน Render โดยไม่รีเซ็ทหน้าปฏิทินที่ผู้ใช้นั่งดูอยู่
+        function renderAllViewsWithoutReset() {
             populateCategoryDropdowns();
             renderCalendarView();
             showDayDetails(selectedDateStr);
-            renderInventoryTable();
-            renderDashboard();
-            renderAdjustLogs();
+            if (activeTabId === 'inventory') renderInventoryTable();
+            if (activeTabId === 'dashboard') renderDashboard();
+            if (activeTabId === 'adjust-logs') renderAdjustLogs();
         }
 
         function showToast(msg) {
