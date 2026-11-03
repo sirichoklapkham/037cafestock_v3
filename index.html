@@ -116,7 +116,6 @@
                         <button onclick="changeCalendarMonth(1)" class="w-7 h-7 bg-slate-100 hover:bg-slate-200 rounded-full flex items-center justify-center text-slate-600 text-xs"><i class="fa-solid fa-chevron-right"></i></button>
                         <button onclick="resetCalendarToCurrent()" class="px-2.5 py-1 bg-slate-900 text-amber-400 text-[10px] font-semibold rounded-lg ml-1">วันนี้</button>
                         
-                        <!-- เพิ่มปุ่มแยกดึงข้อมูลปฏิทินจาก Google Sheet -->
                         <button onclick="fetchDataFromGoogleSheet(true)" class="px-2.5 py-1 bg-amber-500 text-slate-950 text-[10px] font-bold rounded-lg ml-1 flex items-center gap-1 hover:bg-amber-400 transition">
                             <i class="fa-solid fa-rotate text-[10px]"></i>
                             <span>ดึงข้อมูลปฏิทิน</span>
@@ -142,7 +141,6 @@
                     <i class="fa-regular fa-circle-check text-emerald-500 text-base"></i>
                     <span id="calendar-status-chip">ยอดซื้อ-เติมสต๊อกประจำวันอัปเดตเรียบร้อย</span>
                 </div>
-                <button onclick="exportPurchasesCSV()" class="owner-col hidden text-[11px] bg-emerald-600 text-white px-2.5 py-1 rounded-lg font-semibold">CSV</button>
             </div>
 
             <!-- การ์ดสรุปยอดประจำวัน -->
@@ -176,16 +174,6 @@
                         <option value="NORMAL">ปกติ</option>
                     </select>
                 </div>
-
-                <div class="flex gap-2">
-                    <button id="owner-add-item-btn" onclick="openItemModal()" class="hidden flex-1 bg-slate-900 text-amber-400 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center space-x-1 shadow-sm">
-                        <i class="fa-solid fa-plus text-xs"></i>
-                        <span>เพิ่มสินค้าใหม่</span>
-                    </button>
-                    <button id="owner-add-cat-btn" onclick="openCategoryModal()" class="hidden px-3 bg-slate-100 text-slate-700 py-2.5 rounded-xl text-xs font-semibold">
-                        + หมวดหมู่
-                    </button>
-                </div>
             </div>
 
             <div id="inventory-mobile-list" class="space-y-2.5"></div>
@@ -210,18 +198,6 @@
                     <p class="text-[11px] text-slate-400">มูลค่าสต๊อกรวม</p>
                     <h3 id="stat-total-stock-value" class="text-sm font-bold text-emerald-700 mt-0.5">฿0</h3>
                 </div>
-            </div>
-
-            <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm space-y-3">
-                <h3 class="font-bold text-slate-800 text-xs">สัดส่วนสต๊อกตามหมวดหมู่</h3>
-                <div class="h-48 relative">
-                    <canvas id="categoryChart"></canvas>
-                </div>
-            </div>
-
-            <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm space-y-2">
-                <h3 class="font-bold text-slate-800 text-xs">สินค้าสต๊อกต่ำวิกฤต</h3>
-                <div id="dashboard-low-stock-list" class="space-y-2 max-h-48 overflow-y-auto"></div>
             </div>
         </section>
 
@@ -267,22 +243,6 @@
             </button>
         </div>
     </nav>
-
-    <!-- MODALS -->
-    <!-- OWNER AUTH MODAL -->
-    <div id="owner-auth-modal" class="fixed inset-0 modal-backdrop z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-xs w-full p-5 shadow-xl space-y-3">
-            <h3 class="font-bold text-slate-800 text-sm">ยืนยันสิทธิ์เจ้าของร้าน</h3>
-            <form onsubmit="handleOwnerAuth(event)" class="space-y-3 text-xs">
-                <input type="password" id="owner-password-input" required placeholder="กรอกรหัสผ่าน..." class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none">
-                <p id="owner-auth-error" class="text-rose-500 hidden text-[11px]">รหัสผ่านไม่ถูกต้อง</p>
-                <div class="flex justify-end gap-2">
-                    <button type="button" onclick="closeOwnerAuthModal()" class="px-3 py-1.5 text-slate-500">ยกเลิก</button>
-                    <button type="submit" class="bg-amber-500 text-slate-950 px-4 py-1.5 font-bold rounded-xl">ยืนยัน</button>
-                </div>
-            </form>
-        </div>
-    </div>
 
     <!-- QUICK ADJUSTMENT MODAL -->
     <div id="quick-adjust-modal" class="fixed inset-0 modal-backdrop z-50 hidden flex items-center justify-center p-4">
@@ -353,6 +313,7 @@
         let purchases = [];
         let adjustLogs = [];
         let autoSyncTimer = null;
+        let isSyncing = false; // ป้องกันดึงข้อมูลซ้อนกันตอนกำลังเซฟ
 
         let calendarCurrentDate = new Date();
         let selectedDateStr = getFormattedDate(); 
@@ -362,7 +323,7 @@
             return String(str).toLowerCase().replace(/[\u0300-\u036f]/g, '').replace(/[่้๊๋็์ํ๎]/g, '').replace(/\s+/g, '');
         }
 
-        // แปลงวันที่เป็น DD/MM/YYYY
+        // ฟังก์ชันแปลงวันที่ให้ได้มาตรฐาน DD/MM/YYYY เสมอ (ค.ศ.)
         function parseToStandardDateStr(dateInput) {
             if (!dateInput) return '';
             if (dateInput instanceof Date) {
@@ -379,17 +340,25 @@
             
             if (str.includes('-')) {
                 const parts = str.split('-');
-                if (parts.length === 3 && parts[0].length === 4) {
+                if (parts.length === 3) {
+                    let d = parts[2].padStart(2, '0');
+                    let m = parts[1].padStart(2, '0');
                     let y = parseInt(parts[0], 10);
+                    if (parts[0].length === 2) {
+                        d = parts[0].padStart(2, '0');
+                        y = parseInt(parts[2], 10);
+                    }
                     if (y > 2500) y -= 543;
-                    return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${y}`;
+                    return `${d}/${m}/${y}`;
                 }
             } else if (str.includes('/')) {
                 const parts = str.split('/');
                 if (parts.length === 3) {
+                    let d = parts[0].padStart(2, '0');
+                    let m = parts[1].padStart(2, '0');
                     let y = parseInt(parts[2], 10);
                     if (y > 2500) y -= 543;
-                    return `${parts[0].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${y}`;
+                    return `${d}/${m}/${y}`;
                 }
             }
             return str;
@@ -432,14 +401,14 @@
 
         function parseDMYToDateObj(dmyStr) {
             if (!dmyStr) return null;
-            const parts = String(dmyStr).split('/');
+            const stdStr = parseToStandardDateStr(dmyStr);
+            const parts = stdStr.split('/');
             if (parts.length === 3) {
                 let y = Number(parts[2]);
                 if (y > 2500) y -= 543;
                 return new Date(y, Number(parts[1]) - 1, Number(parts[0]));
             }
-            const dt = new Date(dmyStr);
-            return isNaN(dt.getTime()) ? null : dt;
+            return null;
         }
 
         function getFormattedDate(daysAgo = 0) {
@@ -457,9 +426,34 @@
             return `${dateStr} ${hours}:${minutes}:${seconds}`;
         }
 
-        // ดึงข้อมูลตรงจาก Google Sheet และอัปเดตมุมมอง
+        // รวม Local Data และ Sheet Data ไม่ให้ของใหม่ที่เพิ่งเซฟหายไป
+        function mergeServerAndLocalLogs(serverPurchases, serverAdjustLogs) {
+            const mergedPurchases = [...serverPurchases];
+            purchases.forEach(localP => {
+                const exists = mergedPurchases.some(sp => 
+                    sp.itemCode === localP.itemCode && 
+                    sp.qty === localP.qty && 
+                    (sp.timestamp === localP.timestamp || sp.date === localP.date)
+                );
+                if (!exists) mergedPurchases.push(localP);
+            });
+
+            const mergedAdjustLogs = [...serverAdjustLogs];
+            adjustLogs.forEach(localL => {
+                const exists = mergedAdjustLogs.some(sl => 
+                    sl.itemCode === localL.itemCode && 
+                    sl.qty === localL.qty && 
+                    (sl.timestamp === localL.timestamp || sl.date === localL.date)
+                );
+                if (!exists) mergedAdjustLogs.push(localL);
+            });
+
+            purchases = mergedPurchases;
+            adjustLogs = mergedAdjustLogs;
+        }
+
         async function fetchDataFromGoogleSheet(showToastAlert = false) {
-            if (!googleScriptUrl) return;
+            if (!googleScriptUrl || isSyncing) return;
 
             try {
                 if (showToastAlert) showToast('กำลังซิงค์ข้อมูลเรียลไทม์...');
@@ -470,21 +464,19 @@
 
                 if (resData.categories && Array.isArray(resData.categories)) categories = resData.categories;
 
-                if (resData.purchases && Array.isArray(resData.purchases)) {
-                    purchases = resData.purchases.map(p => ({ 
-                        ...p, 
-                        date: parseToStandardDateStr(p.date || p.timestamp),
-                        timestamp: p.timestamp || p.date
-                    }));
-                }
+                const serverPurchases = (resData.purchases || []).map(p => ({ 
+                    ...p, 
+                    date: parseToStandardDateStr(p.date || p.timestamp),
+                    timestamp: p.timestamp || p.date
+                }));
 
-                if (resData.adjustLogs && Array.isArray(resData.adjustLogs)) {
-                    adjustLogs = resData.adjustLogs.map(l => ({ 
-                        ...l, 
-                        date: parseToStandardDateStr(l.date || l.timestamp),
-                        timestamp: l.timestamp || l.date
-                    }));
-                }
+                const serverAdjustLogs = (resData.adjustLogs || []).map(l => ({ 
+                    ...l, 
+                    date: parseToStandardDateStr(l.date || l.timestamp),
+                    timestamp: l.timestamp || l.date
+                }));
+
+                mergeServerAndLocalLogs(serverPurchases, serverAdjustLogs);
 
                 const rawItems = Array.isArray(resData) ? resData : (resData.items || []);
                 if (rawItems.length > 0) {
@@ -525,7 +517,7 @@
 
         function startAutoSync() {
             if (autoSyncTimer) clearInterval(autoSyncTimer);
-            autoSyncTimer = setInterval(() => fetchDataFromGoogleSheet(false), 4000);
+            autoSyncTimer = setInterval(() => fetchDataFromGoogleSheet(false), 5000);
         }
 
         function stopAutoSync() {
@@ -548,6 +540,7 @@
 
         async function syncItemToGoogleSheet(action, payloadData) {
             if (!googleScriptUrl) return;
+            isSyncing = true;
             try {
                 await fetch(googleScriptUrl, {
                     method: 'POST',
@@ -555,76 +548,26 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ action, ...payloadData })
                 });
-                setTimeout(() => fetchDataFromGoogleSheet(false), 5000);
+                setTimeout(() => {
+                    isSyncing = false;
+                    fetchDataFromGoogleSheet(false);
+                }, 6000);
             } catch (err) { 
                 console.error(err); 
+                isSyncing = false;
             }
         }
 
-        /* ------------------ ฟังก์ชันลบรายการ ------------------ */
-        function deleteSingleLog(logType, itemCode, timestamp, qty) {
-            if (!confirm(`คุณต้องการลบรายการนี้ใช่หรือไม่?\n(สต๊อกจะถูกปรับสมดุลคืนให้อัตโนมัติ)`)) return;
-
-            if (logType === 'PURCHASE' || logType === 'ADD') {
-                const idx = purchases.findIndex(p => p.itemCode === itemCode && (p.timestamp === timestamp || p.qty === qty));
-                if (idx !== -1) purchases.splice(idx, 1);
-            } else {
-                const idx = adjustLogs.findIndex(l => l.itemCode === itemCode && (l.timestamp === timestamp || l.qty === qty));
-                if (idx !== -1) adjustLogs.splice(idx, 1);
-            }
-
-            const item = items.find(i => i.code === itemCode);
-            if (item) {
-                if (logType === 'PURCHASE' || logType === 'ADD') item.stock = Math.max(0, item.stock - qty);
-                else item.stock += qty;
-            }
-
-            saveToLocalStorage();
-            renderAllViewsWithoutReset();
-            showToast('ลบรายการเรียบร้อยแล้ว');
-
-            syncItemToGoogleSheet('deleteLog', { logType, itemCode, timestamp, qty });
-        }
-
-        function handleRoleSelect(role) {
-            if (role === 'OWNER') {
-                document.getElementById('owner-password-input').value = '';
-                document.getElementById('owner-auth-modal').classList.remove('hidden');
-            } else {
-                switchRole('STAFF');
-            }
-        }
-
-        function closeOwnerAuthModal() {
-            document.getElementById('owner-auth-modal').classList.add('hidden');
-            document.getElementById('role-selector').value = currentRole;
-        }
-
-        function handleOwnerAuth(e) {
-            e.preventDefault();
-            if (document.getElementById('owner-password-input').value === OWNER_PASSWORD) {
-                closeOwnerAuthModal();
-                switchRole('OWNER');
-            } else {
-                document.getElementById('owner-auth-error').classList.remove('hidden');
-            }
-        }
+        function handleRoleSelect(role) { switchRole(role); }
 
         function switchRole(role) {
             currentRole = role;
             document.getElementById('role-selector').value = role;
-
             if (role === 'OWNER') {
                 stopAutoSync();
-                document.querySelectorAll('.owner-col').forEach(el => el.classList.remove('hidden'));
-                document.getElementById('owner-add-item-btn')?.classList.remove('hidden');
-                document.getElementById('owner-add-cat-btn')?.classList.remove('hidden');
                 showToast('เข้าสู่โหมด: เจ้าของร้าน');
             } else {
                 startAutoSync();
-                document.querySelectorAll('.owner-col').forEach(el => el.classList.add('hidden'));
-                document.getElementById('owner-add-item-btn')?.classList.add('hidden');
-                document.getElementById('owner-add-cat-btn')?.classList.add('hidden');
                 showToast('เข้าสู่โหมด: พนักงาน (Auto-Sync)');
             }
             renderInventoryTable();
@@ -679,7 +622,7 @@
             const dailyHasSub = {};
 
             purchases.forEach(p => {
-                const pDateStr = p.date || parseToStandardDateStr(p.timestamp);
+                const pDateStr = parseToStandardDateStr(p.date || p.timestamp);
                 if (pDateStr) {
                     const pDateObj = parseDMYToDateObj(pDateStr);
                     if (pDateObj && pDateObj.getFullYear() === year && pDateObj.getMonth() === month) {
@@ -691,7 +634,7 @@
             });
 
             adjustLogs.forEach(l => {
-                const logDate = l.date || parseToStandardDateStr(l.timestamp);
+                const logDate = parseToStandardDateStr(l.date || l.timestamp);
                 if (logDate) {
                     const lDateObj = parseDMYToDateObj(logDate);
                     if (lDateObj && lDateObj.getFullYear() === year && lDateObj.getMonth() === month) {
@@ -819,9 +762,6 @@
                                 <span class="font-bold ${isAdd ? 'text-emerald-400' : 'text-rose-400'}">
                                     ${isAdd ? (item.total > 0 ? '฿' + Number(item.total).toLocaleString('th-TH', { minimumFractionDigits: 2 }) : 'เติมเข้า') : 'เบิกออก'}
                                 </span>
-                                <button onclick="deleteSingleLog('${item.logType}', '${item.itemCode}', '${item.timestampStr}', ${item.qty})" class="text-slate-400 hover:text-rose-400 p-1 rounded-lg transition" title="ลบรายการ">
-                                    <i class="fa-solid fa-trash text-xs"></i>
-                                </button>
                             </div>
                         </div>
                     `;
@@ -902,8 +842,9 @@
             const item = items.find(i => Number(i.id) === itemId);
             if (!item) return;
 
-            const todayDateStr = getFormattedDate();
-            const nowDateTimeStr = getFormattedDateTime();
+            // ใช้วันที่ที่กำลังเลือกอยู่บนปฏิทิน หรือวันที่ปัจจุบัน
+            const targetDateStr = selectedDateStr || getFormattedDate();
+            const nowDateTimeStr = `${targetDateStr} ${new Date().toTimeString().split(' ')[0]}`;
 
             if (selectedAdjustType === 'ADD') {
                 item.stock += qty;
@@ -911,7 +852,7 @@
                 purchases.unshift({ 
                     id: Date.now(), 
                     timestamp: nowDateTimeStr, 
-                    date: todayDateStr, 
+                    date: targetDateStr, 
                     itemCode: item.code, 
                     itemName: item.name, 
                     unitCost: unitCost, 
@@ -926,7 +867,7 @@
                 adjustLogs.unshift({ 
                     id: Date.now(), 
                     timestamp: nowDateTimeStr, 
-                    date: todayDateStr, 
+                    date: targetDateStr, 
                     itemCode: item.code, 
                     itemName: item.name, 
                     type: selectedAdjustType, 
@@ -939,14 +880,17 @@
             saveToLocalStorage();
             closeAdjustModal();
             
+            // อัปเดต UI ทันที
+            selectedDateStr = targetDateStr;
             renderCalendarView();
             showDayDetails(selectedDateStr);
             renderInventoryTable();
 
             showToast(selectedAdjustType === 'ADD' ? 'เติมสต๊อกเรียบร้อย (สีเขียว)' : 'เบิกสต๊อกออกเรียบร้อย (สีแดง)');
 
+            // ส่งข้อมูลขึ้น Google Sheet
             syncItemToGoogleSheet('quickAdjust', { 
-                date: todayDateStr, 
+                date: targetDateStr, 
                 code: item.code, 
                 name: item.name, 
                 type: selectedAdjustType, 
@@ -1050,9 +994,6 @@
                             <span class="font-bold ${isAdd ? 'text-emerald-600' : 'text-rose-600'}">
                                 ${isAdd ? '+' : '-'}${log.qty} ${escapeHtml(log.unit || '')}
                             </span>
-                            <button onclick="deleteSingleLog('${log.type}', '${log.itemCode}', '${log.timestamp || log.date}', ${log.qty})" class="text-slate-400 hover:text-rose-500 p-1 rounded-lg transition" title="ลบรายการ">
-                                <i class="fa-solid fa-trash text-xs"></i>
-                            </button>
                         </div>
                     </div>
                 `;
@@ -1064,7 +1005,6 @@
             if (catFilter) catFilter.innerHTML = '<option value="ALL">หมวดหมู่ทั้งหมด</option>' + categories.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
         }
 
-        // ฟังก์ชัน Render โดยไม่รีเซ็ทหน้าปฏิทินที่ผู้ใช้นั่งดูอยู่
         function renderAllViewsWithoutReset() {
             populateCategoryDropdowns();
             renderCalendarView();
@@ -1092,7 +1032,6 @@
         document.getElementById('inventory-cat-filter')?.addEventListener('change', renderInventoryTable);
         document.getElementById('inventory-status-filter')?.addEventListener('change', renderInventoryTable);
 
-        // ดึงข้อมูล Google Sheet อัตโนมัติทันทีที่เปิดเว็บทุกอุปกรณ์
         window.addEventListener('DOMContentLoaded', () => {
             loadLocalOrDefaultData();
             fetchDataFromGoogleSheet(false);
