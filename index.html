@@ -334,7 +334,7 @@
     </div>
 
     <script>
-        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxG-lEW2-n_jCBnobvlz_tDYJ70LcqpH5QgE0rQJyGCBFKnz-bwD451xNJ3RRi01vunTg/exec';
+        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwlTWGivUWOY5crC4_tNJJhCo9ZwR0XfcLCRLmCgH208Iu--aVFCphWJxFvfPpMfs1UTA/exec';
         let googleScriptUrl = DEFAULT_SCRIPT_URL;
 
         const OWNER_PASSWORD = '037cafe';
@@ -342,7 +342,6 @@
         let activeTabId = 'calendar';
         let selectedAdjustItemId = null;
         let selectedAdjustType = 'ADD';
-        let categoryChartInstance = null;
 
         let categories = [{ id: 1, name: 'ทั่วไป' }];
         let items = [];
@@ -358,7 +357,7 @@
             return String(str).toLowerCase().replace(/[\u0300-\u036f]/g, '').replace(/[่้๊๋็์ํ๎]/g, '').replace(/\s+/g, '');
         }
 
-        // แปลงวันที่เป็น DD/MM/YYYY โดยตัดส่วนเวลาทิ้งเสมอกัน 100%
+        // แปลงวันที่เป็น DD/MM/YYYY
         function parseToStandardDateStr(dateInput) {
             if (!dateInput) return '';
             if (dateInput instanceof Date) {
@@ -370,7 +369,7 @@
                 return `${d}/${m}/${y}`;
             }
             let str = String(dateInput).trim();
-            if (str.includes(' ')) str = str.split(' ')[0]; // ตัดข้อความเวลาข้างหลังทิ้ง
+            if (str.includes(' ')) str = str.split(' ')[0]; // ตัดเวลาข้างหลังออกเพื่อกรองวันที่
             if (str.includes('T')) str = str.split('T')[0];
             
             if (str.includes('-')) {
@@ -389,6 +388,42 @@
                 }
             }
             return str;
+        }
+
+        // แปลงสตริง Timestamp ให้เป็นตัวเลขอ้างอิงมิลลิวินาทีสำหรับเรียงลำดับเวลา (เรียงจากล่าสุด -> ไปเก่าสุด)
+        function parseDateTimeToTimestamp(dateTimeStr) {
+            if (!dateTimeStr) return 0;
+            if (dateTimeStr instanceof Date) return dateTimeStr.getTime();
+            
+            let str = String(dateTimeStr).trim();
+            let datePart = str;
+            let timePart = "00:00:00";
+            
+            if (str.includes(" ")) {
+                const parts = str.split(" ");
+                datePart = parts[0];
+                timePart = parts[1] || "00:00:00";
+            } else if (str.includes("T")) {
+                const parts = str.split("T");
+                datePart = parts[0];
+                timePart = parts[1] || "00:00:00";
+            }
+            
+            const stdDateStr = parseToStandardDateStr(datePart);
+            const dParts = stdDateStr.split("/");
+            if (dParts.length !== 3) return 0;
+            
+            let day = parseInt(dParts[0], 10);
+            let month = parseInt(dParts[1], 10) - 1;
+            let year = parseInt(dParts[2], 10);
+            if (year > 2500) year -= 543;
+            
+            const tParts = timePart.split(":");
+            let hour = parseInt(tParts[0] || 0, 10);
+            let min = parseInt(tParts[1] || 0, 10);
+            let sec = parseInt(tParts[2] || 0, 10);
+            
+            return new Date(year, month, day, hour, min, sec).getTime();
         }
 
         function parseDMYToDateObj(dmyStr) {
@@ -411,7 +446,11 @@
 
         function getFormattedDateTime() {
             const d = new Date();
-            return d.toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' });
+            const dateStr = parseToStandardDateStr(d);
+            const hours = String(d.getHours()).padStart(2, '0');
+            const minutes = String(d.getMinutes()).padStart(2, '0');
+            const seconds = String(d.getSeconds()).padStart(2, '0');
+            return `${dateStr} ${hours}:${minutes}:${seconds}`;
         }
 
         async function fetchDataFromGoogleSheet(showToastAlert = false) {
@@ -430,25 +469,31 @@
                 if (resData.purchases && Array.isArray(resData.purchases)) {
                     const fetchedPurchases = resData.purchases.map(p => ({ 
                         ...p, 
-                        date: parseToStandardDateStr(p.date || p.timestamp) 
+                        date: parseToStandardDateStr(p.date || p.timestamp),
+                        timestamp: p.timestamp || p.date
                     }));
 
-                    // รวมรายการ local ที่ยังไม่ซิงค์ลง Google Sheet
-                    const existingIds = new Set(fetchedPurchases.map(p => p.id));
+                    // รวมรายการ local ที่บันทึกใหม่และยังไม่มีในชีท
+                    const existingKeys = new Set(fetchedPurchases.map(p => `${p.itemCode}_${p.timestamp}_${p.qty}`));
                     purchases.forEach(p => {
-                        if (!existingIds.has(p.id)) fetchedPurchases.push(p);
+                        const key = `${p.itemCode}_${p.timestamp}_${p.qty}`;
+                        if (!existingKeys.has(key)) fetchedPurchases.push(p);
                     });
 
                     purchases = fetchedPurchases;
-                    purchases.sort((a, b) => parseDMYToDateObj(b.date) - parseDMYToDateObj(a.date));
                 }
 
                 if (resData.adjustLogs && Array.isArray(resData.adjustLogs)) {
-                    const fetchedLogs = resData.adjustLogs.map(l => ({ ...l, date: parseToStandardDateStr(l.date || l.timestamp) }));
+                    const fetchedLogs = resData.adjustLogs.map(l => ({ 
+                        ...l, 
+                        date: parseToStandardDateStr(l.date || l.timestamp),
+                        timestamp: l.timestamp || l.date
+                    }));
 
-                    const existingLogIds = new Set(fetchedLogs.map(l => l.id));
+                    const existingLogKeys = new Set(fetchedLogs.map(l => `${l.itemCode}_${l.timestamp}_${l.qty}_${l.type}`));
                     adjustLogs.forEach(l => {
-                        if (!existingLogIds.has(l.id)) fetchedLogs.push(l);
+                        const key = `${l.itemCode}_${l.timestamp}_${l.qty}_${l.type}`;
+                        if (!existingLogKeys.has(key)) fetchedLogs.push(l);
                     });
 
                     adjustLogs = fetchedLogs;
@@ -704,40 +749,84 @@
             totalDisplay.innerText = `฿${totalSum.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`;
             countBadge.innerText = `${dayPurchases.length + dayLogs.length} รายการ`;
 
-            if (dayPurchases.length === 0 && dayLogs.length === 0) {
+            // รวมรายการทั้ง 2 ฝั่งเพื่อนำมาจัดเรียงตามลำดับเวลาล่าสุดขึ้นก่อน
+            const combinedList = [];
+
+            dayPurchases.forEach(p => {
+                combinedList.push({
+                    logType: 'PURCHASE',
+                    timeMs: parseDateTimeToTimestamp(p.timestamp || p.date),
+                    timestampStr: p.timestamp || p.date,
+                    itemName: p.itemName,
+                    itemCode: p.itemCode,
+                    qty: p.qty,
+                    unitCost: p.unitCost,
+                    total: p.total,
+                    note: p.supplier || 'เติมสต๊อกด่วน'
+                });
+            });
+
+            dayLogs.forEach(l => {
+                combinedList.push({
+                    logType: l.type,
+                    timeMs: parseDateTimeToTimestamp(l.timestamp || l.date),
+                    timestampStr: l.timestamp || l.date,
+                    itemName: l.itemName,
+                    itemCode: l.itemCode,
+                    qty: l.qty,
+                    unitCost: 0,
+                    total: 0,
+                    note: l.reason || (l.type === 'SUB' ? 'เบิกหน้าร้าน' : 'ปรับสต๊อก')
+                });
+            });
+
+            // เรียงลำดับจาก เวลาล่าสุด -> ไปเวลาแรกสุด
+            combinedList.sort((a, b) => b.timeMs - a.timeMs);
+
+            if (combinedList.length === 0) {
                 itemsList.innerHTML = `<p class="text-xs text-slate-400 py-3 text-center">ไม่มีรายการลงของหรือเบิกออกในวันที่นี้</p>`;
             } else {
                 let html = '';
+                combinedList.forEach(item => {
+                    // ดึงเฉพาะเวลา HH:mm ออกมาโชว์
+                    let timeShow = '';
+                    if (item.timestampStr && item.timestampStr.includes(' ')) {
+                        timeShow = item.timestampStr.split(' ')[1];
+                    }
 
-                dayPurchases.forEach(p => {
-                    html += `
-                        <div class="p-2.5 bg-slate-800/80 rounded-2xl border border-emerald-900/60 flex justify-between items-center text-xs">
-                            <div>
-                                <p class="font-bold text-white flex items-center gap-1.5">
-                                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                                    ${escapeHtml(p.itemName)} <span class="text-[10px] text-slate-400 font-mono">(${escapeHtml(p.itemCode)})</span>
-                                </p>
-                                <p class="text-[10px] text-slate-400">เติมเข้า +${p.qty} | ต้นทุน: ฿${Number(p.unitCost).toFixed(2)} | หมายเหตุ: ${escapeHtml(p.supplier || '-')}</p>
+                    if (item.logType === 'PURCHASE' || item.logType === 'ADD') {
+                        // รายการเติมสต๊อก (สีเขียว)
+                        html += `
+                            <div class="p-2.5 bg-slate-800/80 rounded-2xl border border-emerald-900/60 flex justify-between items-center text-xs">
+                                <div>
+                                    <p class="font-bold text-white flex items-center gap-1.5">
+                                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                        ${escapeHtml(item.itemName)} <span class="text-[10px] text-slate-400 font-mono">(${escapeHtml(item.itemCode)})</span>
+                                    </p>
+                                    <p class="text-[10px] text-slate-400">
+                                        เติมเข้า +${item.qty} | ${item.unitCost > 0 ? 'ต้นทุน: ฿' + Number(item.unitCost).toFixed(2) + ' | ' : ''}${timeShow ? 'เวลา: ' + timeShow + ' | ' : ''}หมายเหตุ: ${escapeHtml(item.note)}
+                                    </p>
+                                </div>
+                                <span class="font-bold text-emerald-400">${item.total > 0 ? '฿' + Number(item.total).toLocaleString('th-TH', { minimumFractionDigits: 2 }) : 'เติมเข้า'}</span>
                             </div>
-                            <span class="font-bold text-emerald-400">฿${Number(p.total).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
-                        </div>
-                    `;
-                });
-
-                dayLogs.forEach(l => {
-                    const isSub = l.type === 'SUB';
-                    html += `
-                        <div class="p-2.5 bg-slate-800/80 rounded-2xl border ${isSub ? 'border-rose-900/60' : 'border-emerald-900/60'} flex justify-between items-center text-xs">
-                            <div>
-                                <p class="font-bold text-white flex items-center gap-1.5">
-                                    <span class="w-2 h-2 rounded-full ${isSub ? 'bg-rose-500' : 'bg-emerald-500'}"></span>
-                                    ${escapeHtml(l.itemName)} <span class="text-[10px] text-slate-400 font-mono">(${escapeHtml(l.itemCode || '')})</span>
-                                </p>
-                                <p class="text-[10px] text-slate-400">${isSub ? 'เบิกออก' : 'เติมเข้า'} ${isSub ? '-' : '+'}${l.qty} | เหตุผล: ${escapeHtml(l.reason || '-')}</p>
+                        `;
+                    } else {
+                        // รายการเบิกออก (สีแดง)
+                        html += `
+                            <div class="p-2.5 bg-slate-800/80 rounded-2xl border border-rose-900/60 flex justify-between items-center text-xs">
+                                <div>
+                                    <p class="font-bold text-white flex items-center gap-1.5">
+                                        <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+                                        ${escapeHtml(item.itemName)} <span class="text-[10px] text-slate-400 font-mono">(${escapeHtml(item.itemCode)})</span>
+                                    </p>
+                                    <p class="text-[10px] text-slate-400">
+                                        เบิกออก -${item.qty} | ${timeShow ? 'เวลา: ' + timeShow + ' | ' : ''}เหตุผล: ${escapeHtml(item.note)}
+                                    </p>
+                                </div>
+                                <span class="font-bold text-rose-400">เบิกออก</span>
                             </div>
-                            <span class="font-bold ${isSub ? 'text-rose-400' : 'text-emerald-400'}">${isSub ? 'เบิกออก' : 'ปรับเข้า'}</span>
-                        </div>
-                    `;
+                        `;
+                    }
                 });
 
                 itemsList.innerHTML = html;
@@ -916,7 +1005,10 @@
                 return;
             }
 
-            container.innerHTML = adjustLogs.map(log => {
+            // เรียงลำดับประวัติการปรับปรุงสต๊อกตามเวลาร่าสุดขึ้นก่อน
+            const sortedLogs = [...adjustLogs].sort((a, b) => parseDateTimeToTimestamp(b.timestamp || b.date) - parseDateTimeToTimestamp(a.timestamp || a.date));
+
+            container.innerHTML = sortedLogs.map(log => {
                 const isAdd = log.type === 'ADD';
                 return `
                     <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-100 flex justify-between items-center text-xs">
