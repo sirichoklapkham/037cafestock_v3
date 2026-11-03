@@ -245,11 +245,9 @@
         </div>
     </nav>
 
-    <!-- QUICK ADJUSTMENT MODAL (เพิ่มการรองรับ Backdrop Click เพื่อปิด) -->
+    <!-- QUICK ADJUSTMENT MODAL -->
     <div id="quick-adjust-modal" onclick="onModalBackdropClick(event)" class="fixed inset-0 modal-backdrop z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl max-w-xs w-full p-5 shadow-xl space-y-3 relative">
-            
-            <!-- ปุ่มปิดมุมขวาบน (X) -->
             <button type="button" onclick="closeAdjustModal()" class="absolute top-3 right-3 text-slate-400 hover:text-slate-600 w-7 h-7 rounded-full flex items-center justify-center">
                 <i class="fa-solid fa-xmark text-base"></i>
             </button>
@@ -306,7 +304,7 @@
     </div>
 
     <script>
-        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwBRae3iGMvhAnYhobr4EwLlFvqWWPnTkyU6SofexyQRx7wbUdC-1ejkaX_kTevqkq4IA/exec';
+        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxBRae3iGMvhAnYhobr4EwLlFvqWWPnTkyU6SofexyQRx7wbUdC-1ejkaX_kTevqkq4IA/exec';
         let googleScriptUrl = DEFAULT_SCRIPT_URL;
 
         const OWNER_PASSWORD = '037cafe';
