@@ -115,6 +115,12 @@
                         <button onclick="changeCalendarMonth(-1)" class="w-7 h-7 bg-slate-100 hover:bg-slate-200 rounded-full flex items-center justify-center text-slate-600 text-xs"><i class="fa-solid fa-chevron-left"></i></button>
                         <button onclick="changeCalendarMonth(1)" class="w-7 h-7 bg-slate-100 hover:bg-slate-200 rounded-full flex items-center justify-center text-slate-600 text-xs"><i class="fa-solid fa-chevron-right"></i></button>
                         <button onclick="resetCalendarToCurrent()" class="px-2.5 py-1 bg-slate-900 text-amber-400 text-[10px] font-semibold rounded-lg ml-1">วันนี้</button>
+                        
+                        <!-- เพิ่มปุ่มแยกดึงข้อมูลปฏิทินจาก Google Sheet -->
+                        <button onclick="fetchDataFromGoogleSheet(true)" class="px-2.5 py-1 bg-amber-500 text-slate-950 text-[10px] font-bold rounded-lg ml-1 flex items-center gap-1 hover:bg-amber-400 transition">
+                            <i class="fa-solid fa-rotate text-[10px]"></i>
+                            <span>ดึงข้อมูลปฏิทิน</span>
+                        </button>
                     </div>
                 </div>
 
@@ -333,7 +339,7 @@
     </div>
 
     <script>
-        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxugPOIH7R4lhHUaZdUNqkQISMreQHgE1KC7RvxmPWkCn-epM_S18MH16xoOWWjrpPVYQ/exec';
+        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyBW817BKoOEYY-opyUkfaOeDyUxcZRSRypU3MZv_GP3ENX4rP0WHXj_fh9kOiIVIXIxg/exec';
         let googleScriptUrl = DEFAULT_SCRIPT_URL;
 
         const OWNER_PASSWORD = '037cafe';
@@ -508,7 +514,7 @@
                         };
                     });
                     saveToLocalStorage();
-                    if (showToastAlert) showToast('ซิงค์ข้อมูลสำเร็จเรียบร้อย');
+                    if (showToastAlert) showToast('ซิงค์ข้อมูลปฏิทินสำเร็จ');
                 }
             } catch (err) {
                 console.error('Fetch error:', err);
