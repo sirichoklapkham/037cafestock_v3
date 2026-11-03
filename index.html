@@ -17,7 +17,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-fontawesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- Google Fonts (Prompt) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -298,7 +298,7 @@
     </div>
 
     <script>
-        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz_C3baeRm8APVGW0LUUzu0au3B3QmY7yIjD1fYOjFvNb9p2rnqZKQ0rzE2fEteNUPJnQ/exec';
+        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyKv9Lf_7WmWcyiC8L6M9YfmG54jigqhmbgywJJMPd7g9GoBFq625BykaQQk5HyE1al/exec';
         let googleScriptUrl = DEFAULT_SCRIPT_URL;
 
         const OWNER_PASSWORD = '037cafe';
@@ -432,7 +432,7 @@
             return parseToStandardDateStr(d);
         }
 
-        // ระบบ Smart Merge รวมข้อมูล Local และ Remote ป้องกันข้อมูลรายการจากเครื่องอื่นโดนทับ
+        // ระบบรวมข้อมูลแบบ Smart Merge ป้องกันข้อมูลหายและซ้ำซ้อน
         function mergeArraysUnique(localArr, remoteArr) {
             const map = new Map();
             remoteArr.forEach(item => {
@@ -519,7 +519,7 @@
 
         function startAutoSync() {
             if (autoSyncTimer) clearInterval(autoSyncTimer);
-            // เปิดให้ Auto-Sync ทำงานทุก 5 วินาทีต่อเนื่องใน Background
+            // Auto-Sync 5 วินาทีใน background ตลอดเวลา
             autoSyncTimer = setInterval(() => {
                 fetchDataFromGoogleSheet(false, false);
             }, 5000);
