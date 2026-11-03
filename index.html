@@ -304,8 +304,8 @@
     </div>
 
     <script>
-        // เปลี่ยนเป็น URL จาก New Deployment ของคุณ
-        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby-c5zJyNh9FnYmT6wCRhPMCntNgxXlLcKuXkdJ6bpLGmxuEJ1bVhbHp8Re5KeyrF1NFQ/exec';
+        // ใส่ URL ที่ได้จาก New Deployment ของ Apps Script
+        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzVbe9YwzIaN-5UXlTrOzAWU3FAnzHVofqSGWO-hiZG2DccYU-bGX8vX0YCeWCv37A_QA/exec';
         let googleScriptUrl = DEFAULT_SCRIPT_URL;
 
         const OWNER_PASSWORD = '037cafe';
@@ -483,8 +483,9 @@
                         };
                     });
                     saveToLocalStorage();
-                    if (showToastAlert) showToast('ซิงค์ข้อมูลเรียบร้อยแล้ว');
                 }
+                
+                if (showToastAlert) showToast('ซิงค์ข้อมูลเรียบร้อยแล้ว');
             } catch (err) {
                 console.error('Fetch error:', err);
                 if (showToastAlert) showToast('การเชื่อมต่อขัดข้อง');
