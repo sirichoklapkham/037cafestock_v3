@@ -78,7 +78,7 @@
             </div>
 
             <div class="flex items-center space-x-2">
-                <button onclick="fetchDataFromGoogleSheet(true)" class="bg-emerald-900/50 border border-emerald-600/50 text-emerald-300 px-2.5 py-1 rounded-lg text-[11px] font-medium flex items-center gap-1 hover:bg-emerald-800/50 transition">
+                <button onclick="fetchDataFromGoogleSheet(true, true)" class="bg-emerald-900/50 border border-emerald-600/50 text-emerald-300 px-2.5 py-1 rounded-lg text-[11px] font-medium flex items-center gap-1 hover:bg-emerald-800/50 transition">
                     <i class="fa-solid fa-file-excel text-emerald-400"></i>
                     <span>โหลด Sheet</span>
                 </button>
@@ -116,7 +116,7 @@
                         <button onclick="changeCalendarMonth(1)" class="w-7 h-7 bg-slate-100 hover:bg-slate-200 rounded-full flex items-center justify-center text-slate-600 text-xs"><i class="fa-solid fa-chevron-right"></i></button>
                         <button onclick="resetCalendarToCurrent()" class="px-2.5 py-1 bg-slate-900 text-amber-400 text-[10px] font-semibold rounded-lg ml-1">วันนี้</button>
                         
-                        <button onclick="fetchDataFromGoogleSheet(true)" class="px-2.5 py-1 bg-amber-500 text-slate-950 text-[10px] font-bold rounded-lg ml-1 flex items-center gap-1 hover:bg-amber-400 transition">
+                        <button onclick="fetchDataFromGoogleSheet(true, true)" class="px-2.5 py-1 bg-amber-500 text-slate-950 text-[10px] font-bold rounded-lg ml-1 flex items-center gap-1 hover:bg-amber-400 transition">
                             <i class="fa-solid fa-rotate text-[10px]"></i>
                             <span>ดึงข้อมูลปฏิทิน</span>
                         </button>
@@ -438,7 +438,9 @@
             return parseToStandardDateStr(d);
         }
 
-        async function fetchDataFromGoogleSheet(showToastAlert = false) {
+        async function fetchDataFromGoogleSheet(showToastAlert = false, forceManual = false) {
+            // หากเป็นการ Auto-Sync (forceManual = false) แล้วผู้ใช้กำลังเปิดแท็บ "ปฏิทิน" ให้ยกเลิกการดึงข้อมูลทับทันที
+            if (!forceManual && activeTabId === 'calendar') return;
             if (!googleScriptUrl || isSyncing || isSubmitting) return;
 
             try {
@@ -507,7 +509,12 @@
 
         function startAutoSync() {
             if (autoSyncTimer) clearInterval(autoSyncTimer);
-            autoSyncTimer = setInterval(() => fetchDataFromGoogleSheet(false), 5000);
+            autoSyncTimer = setInterval(() => {
+                // ปิดการเรียก Auto-Sync เมื่ออยู่หน้าปฏิทิน
+                if (activeTabId !== 'calendar') {
+                    fetchDataFromGoogleSheet(false, false);
+                }
+            }, 5000);
         }
 
         function stopAutoSync() {
@@ -541,7 +548,10 @@
                 setTimeout(async () => {
                     isSubmitting = false;
                     isSyncing = false;
-                    await fetchDataFromGoogleSheet(false);
+                    // ดึงข้อมูลซิงค์กลับเฉพาะเมื่อไม่ได้เปิดหน้าปฏิทิน
+                    if (activeTabId !== 'calendar') {
+                        await fetchDataFromGoogleSheet(false, false);
+                    }
                 }, 2000);
             } catch (err) { 
                 console.error(err); 
@@ -573,7 +583,11 @@
             if (tabId === 'calendar') {
                 renderCalendarView();
                 showDayDetails(selectedDateStr);
+            } else {
+                // หากเปลี่ยนไปหน้าอื่น ให้ดึงข้อมูลล่าสุดของหน้านั้นทันที
+                fetchDataFromGoogleSheet(false, false);
             }
+
             if (tabId === 'inventory') renderInventoryTable();
             if (tabId === 'dashboard') renderDashboard();
             if (tabId === 'adjust-logs') renderAdjustLogs();
@@ -1056,7 +1070,8 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             loadLocalOrDefaultData();
-            fetchDataFromGoogleSheet(false);
+            // เมื่อเปิดเว็บ โหลดข้อมูลครั้งแรก
+            fetchDataFromGoogleSheet(false, true);
             startAutoSync();
         });
     </script>
