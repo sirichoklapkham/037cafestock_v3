@@ -298,7 +298,7 @@
     </div>
 
     <script>
-        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyKv9Lf_7WmWcyiC8L6M9YfmG54jigqhmbgywJJMPd7g9GoBFq625BykaQQk5HyE1al/exec';
+        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzoRKgZ-Ff8J6xKHLAoYxOvSqgVkUdmwPRhUHCoEOQ1PJ_W727NLg_Orcu8PLyMuQtpmg/exec';
         let googleScriptUrl = DEFAULT_SCRIPT_URL;
 
         const OWNER_PASSWORD = '037cafe';
@@ -313,7 +313,6 @@
         let adjustLogs = [];
         let autoSyncTimer = null;
         let isSyncing = false;
-        let isSubmitting = false;
 
         let calendarCurrentDate = new Date();
         let selectedDateStr = getFormattedDate(); 
@@ -432,7 +431,7 @@
             return parseToStandardDateStr(d);
         }
 
-        // ระบบรวมข้อมูลแบบ Smart Merge ป้องกันข้อมูลหายและซ้ำซ้อน
+        // รวมข้อมูลข้ามเครื่องแบบ Smart Reconciliation ป้องกันข้อมูลซ้ำซ้อน
         function mergeArraysUnique(localArr, remoteArr) {
             const map = new Map();
             remoteArr.forEach(item => {
@@ -449,13 +448,15 @@
         }
 
         async function fetchDataFromGoogleSheet(showToastAlert = false, forceManual = false) {
-            if (!googleScriptUrl || isSyncing || (isSubmitting && !forceManual)) return;
+            if (!googleScriptUrl || isSyncing) return;
 
             try {
+                isSyncing = true;
                 if (showToastAlert) showToast('กำลังซิงค์ข้อมูลเรียลไทม์...');
-                const res = await fetch(googleScriptUrl + (googleScriptUrl.includes('?') ? '&' : '?') + '_t=' + Date.now(), {
-                    cache: 'no-store'
-                });
+
+                // ใช้ Dynamic URL Cache Busting บังคับดึงข้อมูลสดจากชีตเสมอ
+                const fetchUrl = googleScriptUrl + (googleScriptUrl.includes('?') ? '&' : '?') + '_t=' + Date.now();
+                const res = await fetch(fetchUrl, { cache: 'no-store' });
                 const resData = await res.json();
 
                 if (resData.categories && Array.isArray(resData.categories)) categories = resData.categories;
@@ -512,6 +513,8 @@
             } catch (err) {
                 console.error('Fetch error:', err);
                 if (showToastAlert) showToast('การเชื่อมต่อขัดข้อง');
+            } finally {
+                isSyncing = false;
             }
 
             renderAllViewsWithoutReset();
@@ -519,7 +522,7 @@
 
         function startAutoSync() {
             if (autoSyncTimer) clearInterval(autoSyncTimer);
-            // ปรับระยะเวลาซิงค์เบื้องหลังลงเหลือ 3 วินาที เพื่อการอัปเดตแบบเรียลไทม์ระหว่างอุปกรณ์
+            // Real-time Background Polling ทุก 3 วินาที
             autoSyncTimer = setInterval(() => {
                 fetchDataFromGoogleSheet(false, false);
             }, 3000);
@@ -545,7 +548,6 @@
 
         async function syncItemToGoogleSheet(action, payloadData) {
             if (!googleScriptUrl) return;
-            isSyncing = true;
             try {
                 await fetch(googleScriptUrl, {
                     method: 'POST',
@@ -553,16 +555,12 @@
                     body: JSON.stringify({ action, ...payloadData })
                 });
 
-                // ดึงข้อมูลอัปเดตทันทีเมื่อบันทึกฝั่งเซิร์ฟเวอร์เสร็จ
+                // บันทึกสำเร็จ สั่งดึงข้อมูลสดกลับมาด่วนเพื่ออัปเดตทุกหน้าจอ
                 setTimeout(async () => {
-                    isSubmitting = false;
-                    isSyncing = false;
                     await fetchDataFromGoogleSheet(false, true);
-                }, 1200);
+                }, 1000);
             } catch (err) { 
                 console.error(err); 
-                isSubmitting = false;
-                isSyncing = false;
             }
         }
 
@@ -881,7 +879,6 @@
             if (!item) return;
 
             const targetDateStr = selectedDateStr || getFormattedDate();
-            isSubmitting = true;
 
             const now = new Date();
             const hh = String(now.getHours()).padStart(2, '0');
