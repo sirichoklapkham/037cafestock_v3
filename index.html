@@ -78,7 +78,7 @@
             </div>
 
             <div class="flex items-center space-x-2">
-                <button onclick="fetchDataFromGoogleSheet(true, true)" class="bg-emerald-900/50 border border-emerald-600/50 text-emerald-300 px-2.5 py-1 rounded-lg text-[11px] font-medium flex items-center gap-1 hover:bg-emerald-800/50 transition">
+                <button onclick="fetchDataFromGoogleSheet(true)" class="bg-emerald-900/50 border border-emerald-600/50 text-emerald-300 px-2.5 py-1 rounded-lg text-[11px] font-medium flex items-center gap-1 hover:bg-emerald-800/50 transition">
                     <i class="fa-solid fa-file-excel text-emerald-400"></i>
                     <span>โหลด Sheet</span>
                 </button>
@@ -298,7 +298,7 @@
     </div>
 
     <script>
-        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzoRKgZ-Ff8J6xKHLAoYxOvSqgVkUdmwPRhUHCoEOQ1PJ_W727NLg_Orcu8PLyMuQtpmg/exec';
+        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzO3GQWwRf9eLJ4w-MDnmtPdrlLBMzCfgdaqxGuRHeG4mcsURiGlTnB8lqHLNohDntOQw/exec';
         let googleScriptUrl = DEFAULT_SCRIPT_URL;
 
         const OWNER_PASSWORD = '037cafe';
@@ -312,7 +312,6 @@
         let purchases = [];
         let adjustLogs = [];
         let autoSyncTimer = null;
-        let isSyncing = false;
 
         let calendarCurrentDate = new Date();
         let selectedDateStr = getFormattedDate(); 
@@ -322,6 +321,7 @@
             return String(str).toLowerCase().replace(/[\u0300-\u036f]/g, '').replace(/[่้๊๋็์ํ๎]/g, '').replace(/\s+/g, '');
         }
 
+        // แปลงรูปแบบวันที่ทั้งหมดเป็น DD/MM/YYYY มาตรฐานเดียวกัน 100%
         function parseToStandardDateStr(dateInput) {
             if (!dateInput) return '';
             
@@ -447,11 +447,11 @@
             return Array.from(map.values());
         }
 
-        async function fetchDataFromGoogleSheet(showToastAlert = false, forceManual = false) {
-            if (!googleScriptUrl || isSyncing) return;
+        // ยกเลิกการล็อคด้วย isSyncing และ isSubmitting เพื่อให้ซิงค์ข้อมูลได้ตลอดเวลา
+        async function fetchDataFromGoogleSheet(showToastAlert = false) {
+            if (!googleScriptUrl) return;
 
             try {
-                isSyncing = true;
                 if (showToastAlert) showToast('กำลังซิงค์ข้อมูลเรียลไทม์...');
 
                 // ใช้ Dynamic URL Cache Busting บังคับดึงข้อมูลสดจากชีตเสมอ
@@ -513,8 +513,6 @@
             } catch (err) {
                 console.error('Fetch error:', err);
                 if (showToastAlert) showToast('การเชื่อมต่อขัดข้อง');
-            } finally {
-                isSyncing = false;
             }
 
             renderAllViewsWithoutReset();
@@ -522,9 +520,9 @@
 
         function startAutoSync() {
             if (autoSyncTimer) clearInterval(autoSyncTimer);
-            // Real-time Background Polling ทุก 3 วินาที
+            // Real-time Background Polling ทุก 3 วินาที ไม่มีล็อคสเตต
             autoSyncTimer = setInterval(() => {
-                fetchDataFromGoogleSheet(false, false);
+                fetchDataFromGoogleSheet(false);
             }, 3000);
         }
 
@@ -555,10 +553,10 @@
                     body: JSON.stringify({ action, ...payloadData })
                 });
 
-                // บันทึกสำเร็จ สั่งดึงข้อมูลสดกลับมาด่วนเพื่ออัปเดตทุกหน้าจอ
+                // บันทึกสำเร็จ สั่งดึงข้อมูลสดกลับมาทันทีเพื่ออัปเดตปฏิทินทุกหน้าจอ
                 setTimeout(async () => {
-                    await fetchDataFromGoogleSheet(false, true);
-                }, 1000);
+                    await fetchDataFromGoogleSheet(false);
+                }, 800);
             } catch (err) { 
                 console.error(err); 
             }
@@ -1069,7 +1067,7 @@
         window.addEventListener('DOMContentLoaded', () => {
             loadLocalOrDefaultData();
             renderAllViewsWithoutReset();
-            fetchDataFromGoogleSheet(false, true);
+            fetchDataFromGoogleSheet(false);
             startAutoSync();
         });
     </script>
