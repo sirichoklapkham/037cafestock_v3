@@ -279,7 +279,7 @@
     </div>
 
     <script>
-        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwh3QF0AUSdRQF6cnZL2nOUCTO_iLsPpsvx55yX6cap5A3THx2hQdLwHXf0hA6tnugmPA/exec';
+        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzv8WMgzWZS5schUOUPdSbt6MgDzfds05P21J0OoLNwrjEhhNh_c__so-HVAldFZoE-nA/exec';
         let googleScriptUrl = DEFAULT_SCRIPT_URL;
 
         let activeTabId = 'calendar';
@@ -299,63 +299,73 @@
             return String(str).toLowerCase().replace(/[\u0300-\u036f]/g, '').replace(/[่้๊๋็์ํ๎]/g, '').replace(/\s+/g, '');
         }
 
-        function parseToStandardDateStr(dateInput) {
+        // ==========================================
+        //  RECONSTRUCTED DATE ENGINE (ระบบประมวลผลวันที่ใหม่)
+        // ==========================================
+
+        // แปลงทุกอินพุตให้กลายเป็น Key มาตรฐาน "YYYY-MM-DD"
+        function getDateKey(dateInput) {
             if (!dateInput) return '';
             
+            let d, m, y;
+
             if (dateInput instanceof Date) {
                 if (isNaN(dateInput.getTime())) return '';
-                const d = String(dateInput.getDate()).padStart(2, '0');
-                const m = String(dateInput.getMonth() + 1).padStart(2, '0');
-                let y = dateInput.getFullYear();
-                if (y > 2500) y -= 543;
-                return `${d}/${m}/${y}`;
-            }
-            
-            let str = String(dateInput).trim();
-            if (str.includes(' ')) str = str.split(' ')[0];
-            if (str.includes('T')) str = str.split('T')[0];
-            
-            let d, m, y;
-            if (str.includes('-')) {
-                const parts = str.split('-');
-                if (parts.length === 3) {
-                    if (parts[0].length === 4) {
-                        y = parseInt(parts[0], 10);
-                        m = parseInt(parts[1], 10);
-                        d = parseInt(parts[2], 10);
-                    } else {
-                        d = parseInt(parts[0], 10);
-                        m = parseInt(parts[1], 10);
-                        y = parseInt(parts[2], 10);
+                d = dateInput.getDate();
+                m = dateInput.getMonth() + 1;
+                y = dateInput.getFullYear();
+            } else {
+                let str = String(dateInput).trim();
+                if (str.includes(' ')) str = str.split(' ')[0];
+                if (str.includes('T')) str = str.split('T')[0];
+
+                if (str.includes('-')) {
+                    const parts = str.split('-');
+                    if (parts.length === 3) {
+                        if (parts[0].length === 4) {
+                            y = parseInt(parts[0], 10);
+                            m = parseInt(parts[1], 10);
+                            d = parseInt(parts[2], 10);
+                        } else {
+                            d = parseInt(parts[0], 10);
+                            m = parseInt(parts[1], 10);
+                            y = parseInt(parts[2], 10);
+                        }
                     }
-                }
-            } else if (str.includes('/')) {
-                const parts = str.split('/');
-                if (parts.length === 3) {
-                    if (parts[2].length === 4) {
-                        d = parseInt(parts[0], 10);
-                        m = parseInt(parts[1], 10);
-                        y = parseInt(parts[2], 10);
-                    } else if (parts[0].length === 4) {
-                        y = parseInt(parts[0], 10);
-                        m = parseInt(parts[1], 10);
-                        d = parseInt(parts[2], 10);
-                    } else {
-                        d = parseInt(parts[0], 10);
-                        m = parseInt(parts[1], 10);
-                        y = parseInt(parts[2], 10);
+                } else if (str.includes('/')) {
+                    const parts = str.split('/');
+                    if (parts.length === 3) {
+                        if (parts[2].length === 4) {
+                            d = parseInt(parts[0], 10);
+                            m = parseInt(parts[1], 10);
+                            y = parseInt(parts[2], 10);
+                        } else if (parts[0].length === 4) {
+                            y = parseInt(parts[0], 10);
+                            m = parseInt(parts[1], 10);
+                            d = parseInt(parts[2], 10);
+                        } else {
+                            d = parseInt(parts[0], 10);
+                            m = parseInt(parts[1], 10);
+                            y = parseInt(parts[2], 10);
+                        }
                     }
                 }
             }
 
             if (d && m && y) {
-                if (y > 2500) y -= 543;
-                const dStr = String(d).padStart(2, '0');
-                const mStr = String(m).padStart(2, '0');
-                return `${dStr}/${mStr}/${y}`;
+                if (y > 2500) y -= 543; // แปลง พ.ศ. -> ค.ศ.
+                return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
             }
 
-            return str;
+            return '';
+        }
+
+        // แปลงอินพุตเป็นข้อความแสดงผลมาตรฐาน "DD/MM/YYYY"
+        function parseToStandardDateStr(dateInput) {
+            const key = getDateKey(dateInput);
+            if (!key) return String(dateInput || '');
+            const parts = key.split('-');
+            return `${parts[2]}/${parts[1]}/${parts[0]}`;
         }
 
         function parseDateTimeToTimestamp(dateTimeStr) {
@@ -376,14 +386,13 @@
                 timePart = parts[1] || "00:00:00";
             }
             
-            const stdDateStr = parseToStandardDateStr(datePart);
-            const dParts = stdDateStr.split("/");
-            if (dParts.length !== 3) return 0;
+            const key = getDateKey(datePart);
+            if (!key) return 0;
+            const dParts = key.split("-");
             
-            let day = parseInt(dParts[0], 10);
+            let year = parseInt(dParts[0], 10);
             let month = parseInt(dParts[1], 10) - 1;
-            let year = parseInt(dParts[2], 10);
-            if (year > 2500) year -= 543;
+            let day = parseInt(dParts[2], 10);
             
             const tParts = timePart.split(":");
             let hour = parseInt(tParts[0] || 0, 10);
@@ -391,18 +400,6 @@
             let sec = parseInt(tParts[2] || 0, 10);
             
             return new Date(year, month, day, hour, min, sec).getTime();
-        }
-
-        function parseDMYToDateObj(dmyStr) {
-            if (!dmyStr) return null;
-            const stdStr = parseToStandardDateStr(dmyStr);
-            const parts = stdStr.split('/');
-            if (parts.length === 3) {
-                let y = Number(parts[2]);
-                if (y > 2500) y -= 543;
-                return new Date(y, Number(parts[1]) - 1, Number(parts[0]));
-            }
-            return null;
         }
 
         function getFormattedDate(daysAgo = 0) {
@@ -446,6 +443,7 @@
                     purchases = resData.purchases.map(p => ({ 
                         ...p, 
                         date: parseToStandardDateStr(p.date),
+                        dateKey: getDateKey(p.date),
                         timestamp: p.timestamp || p.date
                     }));
                 } else {
@@ -456,6 +454,7 @@
                     adjustLogs = resData.adjustLogs.map(l => ({ 
                         ...l, 
                         date: parseToStandardDateStr(l.date),
+                        dateKey: getDateKey(l.date),
                         timestamp: l.timestamp || l.date
                     }));
                 } else {
@@ -523,7 +522,7 @@
 
                 setTimeout(async () => {
                     await fetchDataFromGoogleSheet(false);
-                }, 1500);
+                }, 1200);
             } catch (err) { 
                 console.error(err); 
                 setSyncStatusUI(false, 'บันทึกล้มเหลว');
@@ -578,36 +577,24 @@
             const firstDay = new Date(year, month, 1).getDay();
             const daysInMonth = new Date(year, month + 1, 0).getDate();
 
+            // Map ข้อมูลตาม Date Key (YYYY-MM-DD)
             const dailyTotals = {};
             const dailyHasAdd = {};
             const dailyHasSub = {};
-            const dailyHasExpense = {};
 
             purchases.forEach(p => {
-                const pDateStr = parseToStandardDateStr(p.date);
-                if (pDateStr) {
-                    const pDateObj = parseDMYToDateObj(pDateStr);
-                    if (pDateObj && pDateObj.getFullYear() === year && pDateObj.getMonth() === month) {
-                        const d = pDateObj.getDate();
-                        dailyTotals[d] = (dailyTotals[d] || 0) + Number(p.total || 0);
-                        dailyHasAdd[d] = true;
-                        dailyHasExpense[d] = true;
-                    }
+                const k = p.dateKey || getDateKey(p.date);
+                if (k) {
+                    dailyTotals[k] = (dailyTotals[k] || 0) + Number(p.total || 0);
+                    dailyHasAdd[k] = true;
                 }
             });
 
             adjustLogs.forEach(l => {
-                const logDate = parseToStandardDateStr(l.date);
-                if (logDate) {
-                    const lDateObj = parseDMYToDateObj(logDate);
-                    if (lDateObj && lDateObj.getFullYear() === year && lDateObj.getMonth() === month) {
-                        const d = lDateObj.getDate();
-                        if (l.type === 'SUB') dailyHasSub[d] = true;
-                        else if (l.type === 'ADD') {
-                            dailyHasAdd[d] = true;
-                            dailyHasExpense[d] = true;
-                        }
-                    }
+                const k = l.dateKey || getDateKey(l.date);
+                if (k) {
+                    if (l.type === 'SUB') dailyHasSub[k] = true;
+                    else if (l.type === 'ADD') dailyHasAdd[k] = true;
                 }
             });
 
@@ -616,17 +603,20 @@
                 html += `<div class="p-1 min-h-[48px] bg-slate-50/30 rounded-xl"></div>`;
             }
 
-            const today = new Date();
-            const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
+            const todayKey = getDateKey(new Date());
+            const selectedKey = getDateKey(selectedDateStr);
 
             for (let d = 1; d <= daysInMonth; d++) {
-                const isToday = isCurrentMonth && today.getDate() === d;
-                const dateStr = `${String(d).padStart(2, '0')}/${String(month + 1).padStart(2, '0')}/${year}`;
-                const isSelected = (selectedDateStr === dateStr);
+                const cellDate = new Date(year, month, d);
+                const cellKey = getDateKey(cellDate);
+                const cellDisplayDateStr = parseToStandardDateStr(cellDate);
 
-                const hasAdd = Boolean(dailyHasAdd[d]);
-                const hasSub = Boolean(dailyHasSub[d]);
-                const hasExpense = Boolean(dailyHasExpense[d]);
+                const isToday = (cellKey === todayKey);
+                const isSelected = (cellKey === selectedKey);
+
+                const hasAdd = Boolean(dailyHasAdd[cellKey]);
+                const hasSub = Boolean(dailyHasSub[cellKey]);
+                const hasExpense = (dailyTotals[cellKey] && dailyTotals[cellKey] > 0);
 
                 let dotColorClass = '';
                 if (hasAdd && hasSub) dotColorClass = 'bg-amber-500';
@@ -638,7 +628,7 @@
                 else if (isToday) bgClass = 'bg-amber-100 text-amber-900 border border-amber-300';
 
                 html += `
-                    <div onclick="selectCalendarDate('${dateStr}')" class="p-1.5 min-h-[50px] rounded-2xl ${bgClass} transition cursor-pointer flex flex-col justify-between items-center relative">
+                    <div onclick="selectCalendarDate('${cellDisplayDateStr}')" class="p-1.5 min-h-[50px] rounded-2xl ${bgClass} transition cursor-pointer flex flex-col justify-between items-center relative">
                         ${hasExpense ? `<span class="absolute top-0.5 left-1 text-[9px] leading-none" title="วันที่มีรายจ่ายสต๊อก">💰</span>` : ''}
                         <span class="text-xs font-semibold ${hasExpense ? 'ml-auto' : ''}">${d}</span>
                         ${(hasAdd || hasSub) ? `
@@ -659,7 +649,8 @@
 
         function showDayDetails(dateStr) {
             if (!dateStr) dateStr = selectedDateStr;
-            const targetStdDate = parseToStandardDateStr(dateStr);
+            const targetKey = getDateKey(dateStr);
+            const targetDisplayDate = parseToStandardDateStr(dateStr);
 
             const dateTitle = document.getElementById('detail-date-title');
             const totalDisplay = document.getElementById('detail-total-amount');
@@ -668,19 +659,12 @@
 
             if (!dateTitle || !itemsList) return;
 
-            const dayPurchases = purchases.filter(p => {
-                const stdP = parseToStandardDateStr(p.date);
-                return stdP === targetStdDate;
-            });
-            
-            const dayLogs = adjustLogs.filter(l => {
-                const stdL = parseToStandardDateStr(l.date);
-                return stdL === targetStdDate;
-            });
+            const dayPurchases = purchases.filter(p => (p.dateKey || getDateKey(p.date)) === targetKey);
+            const dayLogs = adjustLogs.filter(l => (l.dateKey || getDateKey(l.date)) === targetKey);
 
             const totalSum = dayPurchases.reduce((sum, p) => sum + Number(p.total || 0), 0);
 
-            dateTitle.innerText = targetStdDate;
+            dateTitle.innerText = targetDisplayDate;
             totalDisplay.innerText = `฿${totalSum.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`;
             countBadge.innerText = `${dayPurchases.length + dayLogs.length} รายการ`;
 
@@ -912,10 +896,13 @@
             document.getElementById('stat-low-stock').innerText = lowStockItems.length;
 
             const now = new Date();
+            const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
             const monthTotal = purchases.filter(p => {
-                const pDate = parseDMYToDateObj(p.date);
-                return pDate && (pDate.getMonth() + 1) === (now.getMonth() + 1) && pDate.getFullYear() === now.getFullYear();
+                const k = p.dateKey || getDateKey(p.date);
+                return k && k.startsWith(currentMonthKey);
             }).reduce((sum, p) => sum + Number(p.total || 0), 0);
+            
             document.getElementById('stat-month-expense').innerText = `฿${monthTotal.toLocaleString('th-TH')}`;
 
             const totalStockValue = items.reduce((sum, item) => sum + (Number(item.stock) * Number(item.lastCost || 0)), 0);
