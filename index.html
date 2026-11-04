@@ -449,7 +449,7 @@
         }
 
         async function fetchDataFromGoogleSheet(showToastAlert = false, forceManual = false) {
-            if (!googleScriptUrl || isSyncing || isSubmitting) return;
+            if (!googleScriptUrl || isSyncing || (isSubmitting && !forceManual)) return;
 
             try {
                 if (showToastAlert) showToast('กำลังซิงค์ข้อมูลเรียลไทม์...');
@@ -519,10 +519,10 @@
 
         function startAutoSync() {
             if (autoSyncTimer) clearInterval(autoSyncTimer);
-            // Auto-Sync 5 วินาทีใน background ตลอดเวลา
+            // ปรับระยะเวลาซิงค์เบื้องหลังลงเหลือ 3 วินาที เพื่อการอัปเดตแบบเรียลไทม์ระหว่างอุปกรณ์
             autoSyncTimer = setInterval(() => {
                 fetchDataFromGoogleSheet(false, false);
-            }, 5000);
+            }, 3000);
         }
 
         function stopAutoSync() {
@@ -553,11 +553,12 @@
                     body: JSON.stringify({ action, ...payloadData })
                 });
 
+                // ดึงข้อมูลอัปเดตทันทีเมื่อบันทึกฝั่งเซิร์ฟเวอร์เสร็จ
                 setTimeout(async () => {
                     isSubmitting = false;
                     isSyncing = false;
                     await fetchDataFromGoogleSheet(false, true);
-                }, 1500);
+                }, 1200);
             } catch (err) { 
                 console.error(err); 
                 isSubmitting = false;
