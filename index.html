@@ -282,7 +282,7 @@
     </div>
 
     <script>
-        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyB73LeuzLCKo2kzt7_H1sTjmcrwRYUiG692kPsVfbUVVF1-JrlgWuhl-p0Y-9OR_GCaQ/exec';
+        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby7ku_JAv8X5Y3B4RtrE7Ta_WeC8Cl2VcvfHrX7M7mcUtfEo-a4g7rtzf3_Q-77ew5P0g/exec';
         let googleScriptUrl = DEFAULT_SCRIPT_URL;
 
         let activeTabId = 'calendar';
@@ -449,7 +449,7 @@
             if (!googleScriptUrl) return;
 
             try {
-                setSyncStatusUI(true, 'กำลังซิงค์ข้อมูลเรียลไทม์...');
+                setSyncStatusUI(true, showToastAlert ? 'กำลังซิงค์ข้อมูลเรียลไทม์...' : 'ซิงค์ข้อมูลเรียลไทม์...');
                 if (showToastAlert) showToast('กำลังซิงค์ข้อมูลเรียลไทม์...');
 
                 const fetchUrl = googleScriptUrl + (googleScriptUrl.includes('?') ? '&' : '?') + '_t=' + Date.now();
