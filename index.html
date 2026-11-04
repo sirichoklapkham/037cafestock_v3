@@ -279,7 +279,7 @@
     </div>
 
     <script>
-        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby7ku_JAv8X5Y3B4RtrE7Ta_WeC8Cl2VcvfHrX7M7mcUtfEo-a4g7rtzf3_Q-77ew5P0g/exec';
+        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwh3QF0AUSdRQF6cnZL2nOUCTO_iLsPpsvx55yX6cap5A3THx2hQdLwHXf0hA6tnugmPA/exec';
         let googleScriptUrl = DEFAULT_SCRIPT_URL;
 
         let activeTabId = 'calendar';
@@ -299,7 +299,6 @@
             return String(str).toLowerCase().replace(/[\u0300-\u036f]/g, '').replace(/[่้๊๋็์ํ๎]/g, '').replace(/\s+/g, '');
         }
 
-        // ปรับปรุงฟังก์ชันแปลงวันที่ให้อยู่ในฟอร์แมต DD/MM/YYYY เสมอแบบแม่นยำ 100%
         function parseToStandardDateStr(dateInput) {
             if (!dateInput) return '';
             
@@ -522,10 +521,9 @@
                     body: JSON.stringify({ action, ...payloadData })
                 });
 
-                // เพิ่มระยะเวลาหน่วงสั้นๆ เพื่อให้ Google Apps Script ประมวลผลก่อนดึงข้อมูลคืน
                 setTimeout(async () => {
                     await fetchDataFromGoogleSheet(false);
-                }, 1000);
+                }, 1500);
             } catch (err) { 
                 console.error(err); 
                 setSyncStatusUI(false, 'บันทึกล้มเหลว');
