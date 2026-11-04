@@ -24,9 +24,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
     <script>
         tailwind.config = {
             theme: {
@@ -80,7 +77,7 @@
             <div class="flex items-center space-x-2">
                 <button onclick="fetchDataFromGoogleSheet(true)" class="bg-emerald-900/50 border border-emerald-600/50 text-emerald-300 px-2.5 py-1 rounded-lg text-[11px] font-medium flex items-center gap-1 hover:bg-emerald-800/50 transition">
                     <i class="fa-solid fa-file-excel text-emerald-400"></i>
-                    <span>โหลด Sheet</span>
+                    <span>รีเฟรช Sheet</span>
                 </button>
             </div>
         </div>
@@ -411,21 +408,6 @@
             return parseToStandardDateStr(d);
         }
 
-        function mergeArraysUnique(localArr, remoteArr) {
-            const map = new Map();
-            remoteArr.forEach(item => {
-                const key = (item.timestamp || item.date) + '_' + (item.itemCode || item.code) + '_' + (item.qty || 0);
-                map.set(key, item);
-            });
-            localArr.forEach(item => {
-                const key = (item.timestamp || item.date) + '_' + (item.itemCode || item.code) + '_' + (item.qty || 0);
-                if (!map.has(key)) {
-                    map.set(key, item);
-                }
-            });
-            return Array.from(map.values());
-        }
-
         // ระบบเปลี่ยนสถานะชิปแจ้งเตือนการซิงค์ข้อมูล
         function setSyncStatusUI(isSyncing, message = '') {
             const chipText = document.getElementById('calendar-status-chip');
@@ -445,6 +427,7 @@
             }
         }
 
+        // ดึงข้อมูลตรงจาก Google Sheet เป็น Single Source of Truth
         async function fetchDataFromGoogleSheet(showToastAlert = false) {
             if (!googleScriptUrl) return;
 
@@ -459,21 +442,23 @@
                 if (resData.categories && Array.isArray(resData.categories)) categories = resData.categories;
 
                 if (resData.purchases && Array.isArray(resData.purchases)) {
-                    const remotePurchases = resData.purchases.map(p => ({ 
+                    purchases = resData.purchases.map(p => ({ 
                         ...p, 
                         date: parseToStandardDateStr(p.date),
                         timestamp: p.timestamp || p.date
                     }));
-                    purchases = mergeArraysUnique(purchases, remotePurchases);
+                } else {
+                    purchases = [];
                 }
 
                 if (resData.adjustLogs && Array.isArray(resData.adjustLogs)) {
-                    const remoteAdjustLogs = resData.adjustLogs.map(l => ({ 
+                    adjustLogs = resData.adjustLogs.map(l => ({ 
                         ...l, 
                         date: parseToStandardDateStr(l.date),
                         timestamp: l.timestamp || l.date
                     }));
-                    adjustLogs = mergeArraysUnique(adjustLogs, remoteAdjustLogs);
+                } else {
+                    adjustLogs = [];
                 }
 
                 const rawItems = Array.isArray(resData) ? resData : (resData.items || []);
@@ -503,9 +488,10 @@
                             orderedNote: String(row.orderedNote || row['หมายเหตุสั่งซื้อ'] || '')
                         };
                     });
+                } else {
+                    items = [];
                 }
                 
-                saveToLocalStorage();
                 setSyncStatusUI(false, 'ซิงค์ข้อมูลเรียลไทม์เรียบร้อย');
                 if (showToastAlert) showToast('ซิงค์ข้อมูลเรียบร้อยแล้ว');
             } catch (err) {
@@ -522,20 +508,6 @@
             autoSyncTimer = setInterval(() => {
                 fetchDataFromGoogleSheet(false);
             }, 3000);
-        }
-
-        function loadLocalOrDefaultData() {
-            categories = JSON.parse(localStorage.getItem('037_categories') || '[{"id":1,"name":"ทั่วไป"}]');
-            items = JSON.parse(localStorage.getItem('037_items') || '[]');
-            purchases = JSON.parse(localStorage.getItem('037_purchases') || '[]');
-            adjustLogs = JSON.parse(localStorage.getItem('037_adjust_logs') || '[]');
-        }
-
-        function saveToLocalStorage() {
-            localStorage.setItem('037_categories', JSON.stringify(categories));
-            localStorage.setItem('037_items', JSON.stringify(items));
-            localStorage.setItem('037_purchases', JSON.stringify(purchases));
-            localStorage.setItem('037_adjust_logs', JSON.stringify(adjustLogs));
         }
 
         async function syncItemToGoogleSheet(action, payloadData) {
@@ -864,48 +836,8 @@
 
             const targetDateStr = selectedDateStr || getFormattedDate();
 
-            const now = new Date();
-            const hh = String(now.getHours()).padStart(2, '0');
-            const mm = String(now.getMinutes()).padStart(2, '0');
-            const ssVal = String(now.getSeconds()).padStart(2, '0');
-            const timeStr = `${hh}:${mm}:${ssVal}`;
-            const fullTimestampStr = `${targetDateStr} ${timeStr}`;
-
-            if (selectedAdjustType === 'ADD') {
-                item.stock = Number(item.stock) + qty;
-                if (unitCost > 0) item.lastCost = unitCost;
-                
-                purchases.push({
-                    id: Date.now(),
-                    date: targetDateStr,
-                    timestamp: fullTimestampStr,
-                    itemCode: item.code,
-                    itemName: item.name,
-                    qty: qty,
-                    unitCost: unitCost,
-                    total: qty * unitCost,
-                    supplier: reason
-                });
-            } else {
-                item.stock = Math.max(0, Number(item.stock) - qty);
-                
-                adjustLogs.push({
-                    id: Date.now(),
-                    date: targetDateStr,
-                    timestamp: fullTimestampStr,
-                    itemCode: item.code,
-                    itemName: item.name,
-                    type: 'SUB',
-                    qty: qty,
-                    reason: reason
-                });
-            }
-
-            saveToLocalStorage();
-            renderAllViewsWithoutReset();
-
             closeAdjustModal();
-            showToast('บันทึกลงปฏิทินสำเร็จ กำลังส่งลง Sheet...');
+            showToast('บันทึกลง Sheet กำลังอัปเดต...');
 
             await syncItemToGoogleSheet('quickAdjust', { 
                 date: targetDateStr, 
@@ -1051,7 +983,7 @@
         document.getElementById('inventory-status-filter')?.addEventListener('change', renderInventoryTable);
 
         window.addEventListener('DOMContentLoaded', () => {
-            loadLocalOrDefaultData();
+            selectedDateStr = getFormattedDate();
             renderAllViewsWithoutReset();
             fetchDataFromGoogleSheet(false);
             startAutoSync();
