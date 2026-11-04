@@ -8,7 +8,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#111827">
+    <meta name="theme-color" content="#2C221E">
 
     <link rel="apple-touch-icon" sizes="180x180" href="https://drive.google.com/thumbnail?id=1UTeeGot9RJL-NB4NjdgK35m7UeQIL-fe&sz=w512">
     <link rel="icon" type="image/png" href="https://drive.google.com/thumbnail?id=1UTeeGot9RJL-NB4NjdgK35m7UeQIL-fe&sz=w512">
@@ -29,13 +29,25 @@
             theme: {
                 extend: {
                     colors: {
-                        brand: {
-                            dark: '#111827',
-                            cardDark: '#1F2937',
-                            accent: '#F59E0B',
-                            accentLight: '#FBBF24',
-                            emerald: '#10B981',
-                            rose: '#EF4444'
+                        oak: {
+                            50: '#FDFBF7',
+                            100: '#F8F4EE',
+                            200: '#EFE6DA',
+                            300: '#DFCDB8',
+                            400: '#C2A383',
+                            500: '#A37E58',
+                            600: '#86613D',
+                            700: '#67492E',
+                            800: '#3D2E28',
+                            900: '#2C221E'
+                        },
+                        sage: {
+                            50: '#F4F7F4',
+                            100: '#E3EBE3',
+                            400: '#5F9B73',
+                            500: '#487B5B',
+                            600: '#386246',
+                            700: '#2A4A35'
                         }
                     },
                     fontFamily: {
@@ -49,33 +61,74 @@
     <style>
         body {
             font-family: 'Prompt', sans-serif;
-            background-color: #F3F4F6;
-            color: #1F2937;
+            background-color: #F8F4EE;
+            color: #2C221E;
             -webkit-tap-highlight-color: transparent;
         }
         ::-webkit-scrollbar { width: 4px; height: 4px; }
-        ::-webkit-scrollbar-track { background: #F1F5F9; }
-        ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
-        .modal-backdrop { background-color: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px); }
-        .dark-card-gradient { background: linear-gradient(145deg, #1F2937 0%, #111827 100%); }
+        ::-webkit-scrollbar-track { background: #F8F4EE; }
+        ::-webkit-scrollbar-thumb { background: #DFCDB8; border-radius: 4px; }
+
+        /* Animation Keyframes */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes popUp {
+            from { opacity: 0; transform: scale(0.92) translateY(10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(72, 123, 91, 0.4); }
+            50% { box-shadow: 0 0 0 8px rgba(72, 123, 91, 0); }
+        }
+
+        .tab-content:not(.hidden) {
+            animation: fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .animate-pop {
+            animation: popUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .pulse-add-btn {
+            animation: pulseGlow 2.5s infinite;
+        }
+        .modal-backdrop { 
+            background-color: rgba(44, 34, 30, 0.6); 
+            backdrop-filter: blur(6px); 
+            transition: all 0.3s ease;
+        }
+        .oak-card-gradient { 
+            background: linear-gradient(145deg, #3D2E28 0%, #2C221E 100%); 
+        }
         .pb-safe { padding-bottom: env(safe-area-inset-bottom, 1rem); }
+
+        /* Smooth UI Feedback */
+        .btn-hover-effect {
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .btn-hover-effect:active {
+            transform: scale(0.92);
+        }
+        .card-shadow {
+            box-shadow: 0 4px 20px -2px rgba(61, 46, 40, 0.06);
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col antialiased pb-24">
 
     <!-- Top Header Bar -->
-    <header class="bg-[#111827] text-white px-4 py-3 sticky top-0 z-30 shadow-md">
+    <header class="bg-[#2C221E] text-white px-4 py-3 sticky top-0 z-30 shadow-md border-b border-oak-700/50">
         <div class="max-w-md mx-auto flex items-center justify-between">
             <div class="flex items-center space-x-2.5">
-                <img src="https://drive.google.com/thumbnail?id=1UTeeGot9RJL-NB4NjdgK35m7UeQIL-fe&sz=w512" alt="Logo" class="w-8 h-8 rounded-full border border-slate-700 object-cover">
+                <img src="https://drive.google.com/thumbnail?id=1UTeeGot9RJL-NB4NjdgK35m7UeQIL-fe&sz=w512" alt="Logo" class="w-8 h-8 rounded-full border border-oak-500 object-cover shadow-sm">
                 <div>
-                    <h1 class="font-bold text-sm leading-tight text-white flex items-center gap-1">037Cafe</h1>
-                    <p class="text-[10px] text-amber-400 font-medium">POS & Expense Audit</p>
+                    <h1 class="font-bold text-sm leading-tight text-[#FAF6F0] flex items-center gap-1">037Cafe</h1>
+                    <p class="text-[10px] text-amber-300 font-medium tracking-wide">POS & Stock Audit</p>
                 </div>
             </div>
 
             <div class="flex items-center space-x-2">
-                <button onclick="fetchDataFromGoogleSheet(true)" class="bg-emerald-900/50 border border-emerald-600/50 text-emerald-300 px-2.5 py-1 rounded-lg text-[11px] font-medium flex items-center gap-1 hover:bg-emerald-800/50 transition">
+                <button onclick="fetchDataFromGoogleSheet(true)" class="bg-sage-600/30 border border-sage-500/50 text-emerald-200 px-3 py-1.5 rounded-xl text-[11px] font-medium flex items-center gap-1.5 hover:bg-sage-600/50 btn-hover-effect">
                     <i class="fa-solid fa-file-excel text-emerald-400"></i>
                     <span>รีเฟรช Sheet</span>
                 </button>
@@ -88,62 +141,62 @@
 
         <!-- 1. CALENDAR TAB -->
         <section id="tab-calendar" class="tab-content space-y-4">
-            <div class="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
+            <div class="bg-[#FDFBF7] rounded-3xl p-4 card-shadow border border-oak-200/60 space-y-3">
                 <div class="flex items-center justify-between px-1">
-                    <h3 id="calendar-month-year" class="font-bold text-slate-800 text-base">พฤศจิกายน 2026</h3>
+                    <h3 id="calendar-month-year" class="font-bold text-oak-900 text-base">พฤศจิกายน 2026</h3>
                     <div class="flex items-center space-x-1">
-                        <button onclick="changeCalendarMonth(-1)" class="w-7 h-7 bg-slate-100 hover:bg-slate-200 rounded-full flex items-center justify-center text-slate-600 text-xs"><i class="fa-solid fa-chevron-left"></i></button>
-                        <button onclick="changeCalendarMonth(1)" class="w-7 h-7 bg-slate-100 hover:bg-slate-200 rounded-full flex items-center justify-center text-slate-600 text-xs"><i class="fa-solid fa-chevron-right"></i></button>
-                        <button onclick="resetCalendarToCurrent()" class="px-2.5 py-1 bg-slate-900 text-amber-400 text-[10px] font-semibold rounded-lg ml-1">วันนี้</button>
+                        <button onclick="changeCalendarMonth(-1)" class="w-7 h-7 bg-oak-100 hover:bg-oak-200 rounded-full flex items-center justify-center text-oak-800 text-xs btn-hover-effect"><i class="fa-solid fa-chevron-left"></i></button>
+                        <button onclick="changeCalendarMonth(1)" class="w-7 h-7 bg-oak-100 hover:bg-oak-200 rounded-full flex items-center justify-center text-oak-800 text-xs btn-hover-effect"><i class="fa-solid fa-chevron-right"></i></button>
+                        <button onclick="resetCalendarToCurrent()" class="px-2.5 py-1 bg-oak-800 text-amber-300 text-[10px] font-semibold rounded-lg ml-1 hover:bg-oak-900 btn-hover-effect">วันนี้</button>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-7 gap-1 text-center text-[11px] font-medium text-slate-400">
-                    <div class="text-rose-500">อา</div>
+                <div class="grid grid-cols-7 gap-1 text-center text-[11px] font-semibold text-oak-400">
+                    <div class="text-rose-600">อา</div>
                     <div>จ</div>
                     <div>อ</div>
                     <div>พ</div>
                     <div>พฤ</div>
                     <div>ศ</div>
-                    <div class="text-amber-500">ส</div>
+                    <div class="text-amber-700">ส</div>
                 </div>
                 
                 <div id="calendar-grid" class="grid grid-cols-7 gap-1.5 text-xs"></div>
             </div>
 
             <!-- แถบแสดงสถานะการซิงค์ข้อมูลเรียลไทม์ -->
-            <div id="sync-status-card" class="bg-emerald-50 border border-emerald-200/60 rounded-2xl p-3 flex items-center justify-between text-emerald-800 text-xs font-medium shadow-xs transition-all duration-300">
+            <div id="sync-status-card" class="bg-sage-50 border border-sage-500/30 rounded-2xl p-3 flex items-center justify-between text-sage-700 text-xs font-medium card-shadow transition-all duration-300">
                 <div class="flex items-center space-x-2">
-                    <i id="sync-status-icon" class="fa-solid fa-circle-check text-emerald-500 text-base"></i>
+                    <i id="sync-status-icon" class="fa-solid fa-circle-check text-sage-500 text-base"></i>
                     <span id="calendar-status-chip">ซิงค์ข้อมูลเรียลไทม์เรียบร้อย</span>
                 </div>
             </div>
 
             <!-- การ์ดสรุปยอดประจำวัน -->
-            <div class="dark-card-gradient text-white rounded-3xl p-5 shadow-lg border border-slate-800 space-y-4">
-                <div class="flex justify-between items-start border-b border-slate-700/60 pb-3">
+            <div class="oak-card-gradient text-white rounded-3xl p-5 shadow-xl border border-oak-700 space-y-4">
+                <div class="flex justify-between items-start border-b border-oak-700/80 pb-3">
                     <div>
-                        <p class="text-[11px] text-slate-400 font-medium">รายละเอียดประจำวันที่ <span id="detail-date-title" class="text-amber-400 font-bold"></span></p>
+                        <p class="text-[11px] text-oak-300 font-medium">รายละเอียดประจำวันที่ <span id="detail-date-title" class="text-amber-300 font-bold"></span></p>
                         <h3 id="detail-total-amount" class="text-2xl font-bold text-amber-400 mt-0.5">฿0.00</h3>
                     </div>
-                    <span id="detail-count-badge" class="px-3 py-1 bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[10px] rounded-full font-semibold">0 รายการ</span>
+                    <span id="detail-count-badge" class="px-3 py-1 bg-amber-500/20 border border-amber-400/30 text-amber-300 text-[10px] rounded-full font-semibold">0 รายการ</span>
                 </div>
 
-                <div id="detail-items-list" class="space-y-2 max-h-64 overflow-y-auto"></div>
+                <div id="detail-items-list" class="space-y-2 max-h-64 overflow-y-auto pr-1"></div>
             </div>
         </section>
 
         <!-- 2. INVENTORY TAB -->
         <section id="tab-inventory" class="tab-content hidden space-y-3">
-            <div class="bg-white p-3.5 rounded-2xl border border-slate-100 shadow-sm space-y-2.5">
+            <div class="bg-[#FDFBF7] p-3.5 rounded-2xl border border-oak-200/60 card-shadow space-y-2.5">
                 <div class="relative w-full">
-                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-xs"></i>
-                    <input type="text" id="inventory-search" placeholder="ค้นหารหัส หรือชื่อสินค้า..." class="w-full pl-8 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-400">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-oak-400 text-xs"></i>
+                    <input type="text" id="inventory-search" placeholder="ค้นหารหัส หรือชื่อสินค้า..." class="w-full pl-8 pr-3 py-2 text-xs bg-oak-50/60 border border-oak-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 transition">
                 </div>
 
                 <div class="grid grid-cols-2 gap-2">
-                    <select id="inventory-cat-filter" class="w-full py-2 px-2 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none"></select>
-                    <select id="inventory-status-filter" class="w-full py-2 px-2 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none">
+                    <select id="inventory-cat-filter" class="w-full py-2 px-2 text-xs bg-oak-50/60 border border-oak-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 transition"></select>
+                    <select id="inventory-status-filter" class="w-full py-2 px-2 text-xs bg-oak-50/60 border border-oak-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 transition">
                         <option value="ALL">สถานะทั้งหมด</option>
                         <option value="LOW">เฉพาะสต๊อกต่ำ/หมด</option>
                         <option value="ORDERED">สั่งซื้อแล้ว (รอของส่ง)</option>
@@ -158,30 +211,30 @@
         <!-- 3. DASHBOARD TAB -->
         <section id="tab-dashboard" class="tab-content hidden space-y-4">
             <div class="grid grid-cols-2 gap-3">
-                <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                    <p class="text-[11px] text-slate-400">สินค้าทั้งหมด</p>
-                    <h3 id="stat-total-items" class="text-xl font-bold text-slate-800 mt-0.5">0</h3>
+                <div class="bg-[#FDFBF7] p-4 rounded-2xl border border-oak-200/60 card-shadow hover:border-amber-400 transition">
+                    <p class="text-[11px] text-oak-500">สินค้าทั้งหมด</p>
+                    <h3 id="stat-total-items" class="text-xl font-bold text-oak-900 mt-0.5">0</h3>
                 </div>
-                <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                    <p class="text-[11px] text-slate-400">เตือนสต๊อกต่ำ</p>
+                <div class="bg-[#FDFBF7] p-4 rounded-2xl border border-oak-200/60 card-shadow hover:border-rose-300 transition">
+                    <p class="text-[11px] text-oak-500">เตือนสต๊อกต่ำ</p>
                     <h3 id="stat-low-stock" class="text-xl font-bold text-rose-600 mt-0.5">0</h3>
                 </div>
-                <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                    <p class="text-[11px] text-slate-400">ยอดซื้อเข้าเดือนนี้</p>
-                    <h3 id="stat-month-expense" class="text-sm font-bold text-slate-800 mt-0.5">฿0</h3>
+                <div class="bg-[#FDFBF7] p-4 rounded-2xl border border-oak-200/60 card-shadow hover:border-amber-400 transition">
+                    <p class="text-[11px] text-oak-500">ยอดซื้อเข้าเดือนนี้</p>
+                    <h3 id="stat-month-expense" class="text-sm font-bold text-oak-900 mt-0.5">฿0</h3>
                 </div>
-                <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                    <p class="text-[11px] text-slate-400">มูลค่าสต๊อกรวม</p>
-                    <h3 id="stat-total-stock-value" class="text-sm font-bold text-emerald-700 mt-0.5">฿0</h3>
+                <div class="bg-[#FDFBF7] p-4 rounded-2xl border border-oak-200/60 card-shadow hover:border-sage-500 transition">
+                    <p class="text-[11px] text-oak-500">มูลค่าสต๊อกรวม</p>
+                    <h3 id="stat-total-stock-value" class="text-sm font-bold text-sage-600 mt-0.5">฿0</h3>
                 </div>
             </div>
         </section>
 
         <!-- 4. ADJUST LOGS TAB -->
         <section id="tab-adjust-logs" class="tab-content hidden space-y-3">
-            <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm space-y-3">
+            <div class="bg-[#FDFBF7] p-4 rounded-2xl border border-oak-200/60 card-shadow space-y-3">
                 <div class="flex justify-between items-center">
-                    <h3 class="font-bold text-slate-800 text-sm">ประวัติการปรับปรุงสต๊อก</h3>
+                    <h3 class="font-bold text-oak-900 text-sm">ประวัติการปรับปรุงสต๊อก</h3>
                 </div>
                 <div id="adjust-logs-mobile-container" class="space-y-2 text-xs"></div>
             </div>
@@ -190,30 +243,30 @@
     </main>
 
     <!-- Bottom Navigation Bar -->
-    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-40 pb-safe shadow-lg">
+    <nav class="fixed bottom-0 left-0 right-0 bg-[#FDFBF7]/95 backdrop-blur-md border-t border-oak-200/80 z-40 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
         <div class="max-w-md mx-auto grid grid-cols-4 items-center justify-items-center py-2 px-1">
-            <button onclick="switchTab('calendar')" id="nav-calendar" class="nav-btn flex flex-col items-center justify-center w-full py-1 text-amber-500 font-semibold">
+            <button onclick="switchTab('calendar')" id="nav-calendar" class="nav-btn flex flex-col items-center justify-center w-full py-1 text-amber-700 font-bold transition-all btn-hover-effect">
                 <i class="fa-solid fa-calendar-days text-lg"></i>
                 <span class="text-[10px] mt-1">ปฏิทิน/ยอด</span>
             </button>
 
-            <!-- เติมสต๊อก (เขียว) -->
-            <button onclick="triggerQuickAddModal()" class="flex flex-col items-center justify-center w-full py-1 text-slate-700 hover:text-emerald-600 active:scale-95 transition">
-                <div class="w-9 h-9 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center shadow-xs">
-                    <i class="fa-solid fa-box-archive text-sm"></i>
+            <!-- เติมสต๊อก (ดีไซน์ใหม่ เขียวแมกไม้ + Pulse Glow Animation) -->
+            <button onclick="triggerQuickAddModal()" class="flex flex-col items-center justify-center w-full py-1 btn-hover-effect group">
+                <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-sage-400 to-sage-600 text-white flex items-center justify-center shadow-md shadow-sage-600/30 pulse-add-btn group-hover:scale-110 transition-transform">
+                    <i class="fa-solid fa-box-archive text-base"></i>
                 </div>
-                <span class="text-[10px] font-bold text-emerald-600 mt-0.5">เติมสต๊อก</span>
+                <span class="text-[10px] font-bold text-sage-700 mt-1">เติมสต๊อก</span>
             </button>
 
-            <!-- เบิกออก (แดง) -->
-            <button onclick="triggerQuickSubModal()" class="flex flex-col items-center justify-center w-full py-1 text-slate-700 hover:text-rose-600 active:scale-95 transition">
-                <div class="w-9 h-9 rounded-full bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center shadow-xs">
-                    <i class="fa-solid fa-dolly text-sm"></i>
+            <!-- เบิกออก (ดีไซน์ใหม่ ส้มอิฐ/แดง) -->
+            <button onclick="triggerQuickSubModal()" class="flex flex-col items-center justify-center w-full py-1 btn-hover-effect group">
+                <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-rose-400 to-rose-600 text-white flex items-center justify-center shadow-md shadow-rose-600/20 group-hover:scale-110 transition-transform">
+                    <i class="fa-solid fa-dolly text-base"></i>
                 </div>
-                <span class="text-[10px] font-bold text-rose-600 mt-0.5">เบิกออก</span>
+                <span class="text-[10px] font-bold text-rose-600 mt-1">เบิกออก</span>
             </button>
 
-            <button onclick="switchTab('inventory')" id="nav-inventory" class="nav-btn flex flex-col items-center justify-center w-full py-1 text-slate-400">
+            <button onclick="switchTab('inventory')" id="nav-inventory" class="nav-btn flex flex-col items-center justify-center w-full py-1 text-oak-400 hover:text-oak-700 transition-all btn-hover-effect">
                 <i class="fa-solid fa-boxes-stacked text-lg"></i>
                 <span class="text-[10px] mt-1">รายการสินค้า</span>
             </button>
@@ -222,59 +275,59 @@
 
     <!-- QUICK ADJUSTMENT MODAL -->
     <div id="quick-adjust-modal" onclick="onModalBackdropClick(event)" class="fixed inset-0 modal-backdrop z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-xs w-full p-5 shadow-xl space-y-3 relative">
-            <button type="button" onclick="closeAdjustModal()" class="absolute top-3 right-3 text-slate-400 hover:text-slate-600 w-7 h-7 rounded-full flex items-center justify-center">
+        <div class="bg-[#FDFBF7] rounded-3xl max-w-xs w-full p-5 shadow-2xl border border-oak-200 space-y-3 relative animate-pop">
+            <button type="button" onclick="closeAdjustModal()" class="absolute top-3.5 right-3.5 text-oak-400 hover:text-oak-700 w-7 h-7 rounded-full flex items-center justify-center btn-hover-effect">
                 <i class="fa-solid fa-xmark text-base"></i>
             </button>
 
-            <h3 class="font-bold text-slate-800 text-sm" id="adjust-modal-title">ปรับสต๊อกด่วน</h3>
+            <h3 class="font-bold text-oak-900 text-sm" id="adjust-modal-title">ปรับสต๊อกด่วน</h3>
             
             <div class="space-y-2.5 text-xs">
                 <div>
-                    <label class="block text-slate-500 mb-1">เลือกรายการสินค้า</label>
-                    <select id="adjust-select-item" onchange="onAdjustItemChange()" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-400"></select>
+                    <label class="block text-oak-600 font-medium mb-1">เลือกรายการสินค้า</label>
+                    <select id="adjust-select-item" onchange="onAdjustItemChange()" class="w-full p-2.5 bg-oak-50 border border-oak-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500"></select>
                 </div>
 
                 <div>
-                    <label class="block text-slate-500 mb-1">ประเภท</label>
+                    <label class="block text-oak-600 font-medium mb-1">ประเภท</label>
                     <div class="grid grid-cols-2 gap-2">
-                        <button type="button" id="adjust-type-add" onclick="setAdjustType('ADD')" class="py-2 border border-emerald-300 bg-emerald-50 text-emerald-800 rounded-xl font-semibold">รับเข้า (+)</button>
-                        <button type="button" id="adjust-type-sub" onclick="setAdjustType('SUB')" class="py-2 border border-slate-200 text-slate-600 rounded-xl font-semibold">เบิกออก (-)</button>
+                        <button type="button" id="adjust-type-add" onclick="setAdjustType('ADD')" class="py-2 border border-sage-500/50 bg-sage-50 text-sage-700 rounded-xl font-semibold btn-hover-effect">รับเข้า (+)</button>
+                        <button type="button" id="adjust-type-sub" onclick="setAdjustType('SUB')" class="py-2 border border-oak-200 text-oak-600 rounded-xl font-semibold btn-hover-effect">เบิกออก (-)</button>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-2">
                     <div>
-                        <label class="block text-slate-500 mb-1">จำนวน (<span id="adjust-unit-label">ชิ้น</span>)</label>
-                        <input type="number" id="adjust-qty" step="0.01" min="0.01" required oninput="calculateAdjustTotal()" placeholder="0" class="w-full p-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl outline-none">
+                        <label class="block text-oak-600 font-medium mb-1">จำนวน (<span id="adjust-unit-label">ชิ้น</span>)</label>
+                        <input type="number" id="adjust-qty" step="0.01" min="0.01" required oninput="calculateAdjustTotal()" placeholder="0" class="w-full p-2.5 text-sm bg-oak-50 border border-oak-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500">
                     </div>
                     <div id="adjust-cost-container">
-                        <label class="block text-slate-500 mb-1">ต้นทุน/หน่วย (฿)</label>
-                        <input type="number" id="adjust-unit-cost" step="0.01" min="0" oninput="calculateAdjustTotal()" placeholder="0.00" class="w-full p-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl outline-none">
+                        <label class="block text-oak-600 font-medium mb-1">ต้นทุน/หน่วย (฿)</label>
+                        <input type="number" id="adjust-unit-cost" step="0.01" min="0" oninput="calculateAdjustTotal()" placeholder="0.00" class="w-full p-2.5 text-sm bg-oak-50 border border-oak-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500">
                     </div>
                 </div>
 
-                <div id="adjust-total-box" class="p-2.5 bg-amber-50 rounded-xl border border-amber-200 flex justify-between items-center text-xs">
-                    <span class="text-slate-600 font-medium">ราคารวมทั้งสิ้น:</span>
-                    <span id="adjust-total-display" class="font-bold text-amber-700">฿0.00</span>
+                <div id="adjust-total-box" class="p-2.5 bg-amber-50/80 rounded-xl border border-amber-200/80 flex justify-between items-center text-xs">
+                    <span class="text-oak-700 font-medium">ราคารวมทั้งสิ้น:</span>
+                    <span id="adjust-total-display" class="font-bold text-amber-800 text-sm">฿0.00</span>
                 </div>
 
                 <div>
-                    <label class="block text-slate-500 mb-1">ผู้ขาย / หมายเหตุ</label>
-                    <input type="text" id="adjust-reason" placeholder="เช่น สั่ง Makro / เบิกหน้าร้าน..." class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none">
+                    <label class="block text-oak-600 font-medium mb-1">ผู้ขาย / หมายเหตุ</label>
+                    <input type="text" id="adjust-reason" placeholder="เช่น สั่ง Makro / เบิกหน้าร้าน..." class="w-full p-2.5 bg-oak-50 border border-oak-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500">
                 </div>
             </div>
 
             <div class="flex justify-end gap-2 pt-2">
-                <button type="button" onclick="closeAdjustModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs rounded-xl">ยกเลิก</button>
-                <button type="button" id="btn-submit-adjust" onclick="submitQuickAdjust()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-4 py-2 text-xs rounded-xl shadow-xs">บันทึก</button>
+                <button type="button" onclick="closeAdjustModal()" class="px-4 py-2 bg-oak-100 hover:bg-oak-200 text-oak-700 font-medium text-xs rounded-xl btn-hover-effect">ยกเลิก</button>
+                <button type="button" id="btn-submit-adjust" onclick="submitQuickAdjust()" class="bg-amber-600 hover:bg-amber-700 text-white font-bold px-4 py-2 text-xs rounded-xl shadow-md btn-hover-effect">บันทึก</button>
             </div>
         </div>
     </div>
 
     <!-- TOAST NOTIFICATION -->
-    <div id="toast" class="fixed bottom-16 left-1/2 transform -translate-x-1/2 z-50 opacity-0 transition-all duration-300 bg-slate-900 text-amber-400 px-4 py-2.5 rounded-full shadow-lg text-xs font-semibold flex items-center space-x-2 pointer-events-none">
-        <i id="toast-icon" class="fa-solid fa-circle-check"></i>
+    <div id="toast" class="fixed bottom-16 left-1/2 transform -translate-x-1/2 z-50 opacity-0 transition-all duration-300 bg-oak-900 text-amber-300 px-4 py-2.5 rounded-full shadow-2xl text-xs font-semibold flex items-center space-x-2 pointer-events-none border border-oak-700">
+        <i id="toast-icon" class="fa-solid fa-circle-check text-sage-500"></i>
         <span id="toast-message">ทำรายการสำเร็จ</span>
     </div>
 
@@ -300,10 +353,9 @@
         }
 
         // ==========================================
-        //  RECONSTRUCTED DATE ENGINE (ระบบประมวลผลวันที่ใหม่)
+        //  RECONSTRUCTED DATE ENGINE
         // ==========================================
 
-        // แปลงทุกอินพุตให้กลายเป็น Key มาตรฐาน "YYYY-MM-DD"
         function getDateKey(dateInput) {
             if (!dateInput) return '';
             
@@ -353,14 +405,13 @@
             }
 
             if (d && m && y) {
-                if (y > 2500) y -= 543; // แปลง พ.ศ. -> ค.ศ.
+                if (y > 2500) y -= 543;
                 return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
             }
 
             return '';
         }
 
-        // แปลงอินพุตเป็นข้อความแสดงผลมาตรฐาน "DD/MM/YYYY"
         function parseToStandardDateStr(dateInput) {
             const key = getDateKey(dateInput);
             if (!key) return String(dateInput || '');
@@ -417,12 +468,12 @@
 
             if (isSyncing) {
                 chipText.innerText = message || 'กำลังซิงค์ข้อมูลเรียลไทม์...';
-                chipIcon.className = 'fa-solid fa-arrows-rotate fa-spin text-amber-500 text-base';
-                syncCard.className = 'bg-amber-50 border border-amber-200/60 rounded-2xl p-3 flex items-center justify-between text-amber-800 text-xs font-medium shadow-xs transition-all duration-300';
+                chipIcon.className = 'fa-solid fa-arrows-rotate fa-spin text-amber-600 text-base';
+                syncCard.className = 'bg-amber-50 border border-amber-200/80 rounded-2xl p-3 flex items-center justify-between text-amber-800 text-xs font-medium card-shadow transition-all duration-300';
             } else {
                 chipText.innerText = message || 'ซิงค์ข้อมูลเรียลไทม์เรียบร้อย';
-                chipIcon.className = 'fa-solid fa-circle-check text-emerald-500 text-base';
-                syncCard.className = 'bg-emerald-50 border border-emerald-200/60 rounded-2xl p-3 flex items-center justify-between text-emerald-800 text-xs font-medium shadow-xs transition-all duration-300';
+                chipIcon.className = 'fa-solid fa-circle-check text-sage-500 text-base';
+                syncCard.className = 'bg-sage-50 border border-sage-500/30 rounded-2xl p-3 flex items-center justify-between text-sage-700 text-xs font-medium card-shadow transition-all duration-300';
             }
         }
 
@@ -532,13 +583,13 @@
         function switchTab(tabId) {
             activeTabId = tabId;
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('.nav-btn').forEach(el => el.className = 'nav-btn flex flex-col items-center justify-center w-full py-1 text-slate-400');
+            document.querySelectorAll('.nav-btn').forEach(el => el.className = 'nav-btn flex flex-col items-center justify-center w-full py-1 text-oak-400 hover:text-oak-700 transition-all btn-hover-effect');
 
             const activeTab = document.getElementById(`tab-${tabId}`);
             if (activeTab) activeTab.classList.remove('hidden');
 
             const activeNav = document.getElementById(`nav-${tabId}`);
-            if (activeNav) activeNav.className = 'nav-btn flex flex-col items-center justify-center w-full py-1 text-amber-500 font-semibold';
+            if (activeNav) activeNav.className = 'nav-btn flex flex-col items-center justify-center w-full py-1 text-amber-700 font-bold transition-all btn-hover-effect';
 
             if (tabId === 'calendar') {
                 renderCalendarView();
@@ -577,7 +628,6 @@
             const firstDay = new Date(year, month, 1).getDay();
             const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-            // Map ข้อมูลตาม Date Key (YYYY-MM-DD)
             const dailyTotals = {};
             const dailyHasAdd = {};
             const dailyHasSub = {};
@@ -600,7 +650,7 @@
 
             let html = '';
             for (let i = 0; i < firstDay; i++) {
-                html += `<div class="p-1 min-h-[48px] bg-slate-50/30 rounded-xl"></div>`;
+                html += `<div class="p-1 min-h-[48px] bg-oak-50/20 rounded-xl"></div>`;
             }
 
             const todayKey = getDateKey(new Date());
@@ -620,20 +670,20 @@
 
                 let dotColorClass = '';
                 if (hasAdd && hasSub) dotColorClass = 'bg-amber-500';
-                else if (hasAdd) dotColorClass = 'bg-emerald-500';
+                else if (hasAdd) dotColorClass = 'bg-sage-500';
                 else if (hasSub) dotColorClass = 'bg-rose-500';
 
-                let bgClass = 'bg-slate-50 text-slate-700';
-                if (isSelected) bgClass = 'bg-amber-500 text-slate-950 font-bold shadow-md';
-                else if (isToday) bgClass = 'bg-amber-100 text-amber-900 border border-amber-300';
+                let bgClass = 'bg-oak-50/80 text-oak-800 hover:bg-oak-100';
+                if (isSelected) bgClass = 'bg-amber-500 text-oak-900 font-bold shadow-md scale-105';
+                else if (isToday) bgClass = 'bg-amber-100 text-amber-900 border border-amber-300 font-semibold';
 
                 html += `
-                    <div onclick="selectCalendarDate('${cellDisplayDateStr}')" class="p-1.5 min-h-[50px] rounded-2xl ${bgClass} transition cursor-pointer flex flex-col justify-between items-center relative">
+                    <div onclick="selectCalendarDate('${cellDisplayDateStr}')" class="p-1.5 min-h-[50px] rounded-2xl ${bgClass} transition-all duration-200 cursor-pointer flex flex-col justify-between items-center relative btn-hover-effect">
                         ${hasExpense ? `<span class="absolute top-0.5 left-1 text-[9px] leading-none" title="วันที่มีรายจ่ายสต๊อก">💰</span>` : ''}
-                        <span class="text-xs font-semibold ${hasExpense ? 'ml-auto' : ''}">${d}</span>
+                        <span class="text-xs ${hasExpense ? 'ml-auto' : ''}">${d}</span>
                         ${(hasAdd || hasSub) ? `
-                            <span class="w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-slate-950' : dotColorClass}"></span>
-                        ` : '<span class="text-[9px] text-slate-300">-</span>'}
+                            <span class="w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-oak-900' : dotColorClass}"></span>
+                        ` : '<span class="text-[9px] text-oak-300">-</span>'}
                     </div>
                 `;
             }
@@ -701,7 +751,7 @@
             combinedList.sort((a, b) => b.timeMs - a.timeMs);
 
             if (combinedList.length === 0) {
-                itemsList.innerHTML = `<p class="text-xs text-slate-400 py-3 text-center">ไม่มีรายการลงของหรือเบิกออกในวันที่นี้</p>`;
+                itemsList.innerHTML = `<p class="text-xs text-oak-300 py-3 text-center font-light">ไม่มีรายการลงของหรือเบิกออกในวันที่นี้</p>`;
             } else {
                 let html = '';
                 combinedList.forEach(item => {
@@ -714,19 +764,20 @@
 
                     const isAdd = (item.logType === 'PURCHASE' || item.logType === 'ADD');
                     
+                    // ปรับแต่งสีพื้นหลังกล่องให้สว่างอ่อนลงนุ่มตาขึ้น
                     html += `
-                        <div class="p-2.5 bg-slate-800/80 rounded-2xl border ${isAdd ? 'border-emerald-900/60' : 'border-rose-900/60'} flex justify-between items-center text-xs">
+                        <div class="p-3 bg-[#4A3B32]/60 backdrop-blur-xs rounded-2xl border ${isAdd ? 'border-sage-500/50' : 'border-rose-400/40'} flex justify-between items-center text-xs transition-all hover:bg-[#58463B]/70">
                             <div>
-                                <p class="font-bold text-white flex items-center gap-1.5">
-                                    <span class="w-2 h-2 rounded-full ${isAdd ? 'bg-emerald-500' : 'bg-rose-500'}"></span>
-                                    ${escapeHtml(item.itemName)} <span class="text-[10px] text-slate-400 font-mono">(${escapeHtml(item.itemCode)})</span>
+                                <p class="font-semibold text-white flex items-center gap-1.5">
+                                    <span class="w-2.5 h-2.5 rounded-full ${isAdd ? 'bg-sage-400 shadow-xs shadow-sage-400/50' : 'bg-rose-400 shadow-xs shadow-rose-400/50'}"></span>
+                                    ${escapeHtml(item.itemName)} <span class="text-[10px] text-oak-300 font-mono">(${escapeHtml(item.itemCode)})</span>
                                 </p>
-                                <p class="text-[10px] text-slate-400">
+                                <p class="text-[10px] text-oak-200/90 mt-0.5">
                                     ${isAdd ? 'เติมเข้า +' : 'เบิกออก -'}${item.qty} | ${item.unitCost > 0 ? 'ต้นทุน: ฿' + Number(item.unitCost).toFixed(2) + ' | ' : ''}${timeShow ? 'เวลา: ' + timeShow + ' | ' : ''}หมายเหตุ: ${escapeHtml(item.note)}
                                 </p>
                             </div>
                             <div class="flex items-center gap-2">
-                                <span class="font-bold ${isAdd ? 'text-emerald-400' : 'text-rose-400'}">
+                                <span class="font-bold ${isAdd ? 'text-sage-300' : 'text-rose-300'}">
                                     ${isAdd ? (item.total > 0 ? '฿' + Number(item.total).toLocaleString('th-TH', { minimumFractionDigits: 2 }) : 'เติมเข้า') : 'เบิกออก'}
                                 </span>
                             </div>
@@ -795,15 +846,15 @@
             const titleEl = document.getElementById('adjust-modal-title');
 
             if (type === 'ADD') {
-                titleEl.innerText = 'เติมสต๊อกสินค้าเข้า (สีเขียว)';
-                addBtn.className = 'py-2 border border-emerald-300 bg-emerald-50 text-emerald-800 rounded-xl font-semibold';
-                subBtn.className = 'py-2 border border-slate-200 text-slate-600 rounded-xl font-semibold';
+                titleEl.innerText = 'เติมสต๊อกสินค้าเข้า (เขียวแมกไม้)';
+                addBtn.className = 'py-2 border border-sage-500/50 bg-sage-50 text-sage-700 rounded-xl font-semibold btn-hover-effect';
+                subBtn.className = 'py-2 border border-oak-200 text-oak-600 rounded-xl font-semibold btn-hover-effect';
                 costBox.classList.remove('hidden');
                 totalBox.classList.remove('hidden');
             } else {
-                titleEl.innerText = 'เบิกสินค้าออกจากสต๊อก (สีแดง)';
-                subBtn.className = 'py-2 border border-rose-300 bg-rose-50 text-rose-800 rounded-xl font-semibold';
-                addBtn.className = 'py-2 border border-slate-200 text-slate-600 rounded-xl font-semibold';
+                titleEl.innerText = 'เบิกสินค้าออกจากสต๊อก (ส้มอิฐ)';
+                subBtn.className = 'py-2 border border-rose-300 bg-rose-50 text-rose-700 rounded-xl font-semibold btn-hover-effect';
+                addBtn.className = 'py-2 border border-oak-200 text-oak-600 rounded-xl font-semibold btn-hover-effect';
                 costBox.classList.add('hidden');
                 totalBox.classList.add('hidden');
             }
@@ -856,33 +907,33 @@
             });
 
             if (filtered.length === 0) {
-                container.innerHTML = `<p class="text-xs text-slate-400 py-6 text-center">ไม่พบรายการสินค้า</p>`;
+                container.innerHTML = `<p class="text-xs text-oak-400 py-6 text-center font-light">ไม่พบรายการสินค้า</p>`;
                 return;
             }
 
             container.innerHTML = filtered.map(item => {
                 const isLow = Number(item.stock) <= Number(item.minAlert);
                 let statusBadge = item.isOrdered 
-                    ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-700">สั่งแล้ว (${item.orderedQty} ${escapeHtml(item.unit)})</span>` 
-                    : (isLow ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-100 text-rose-700">สต๊อกต่ำ</span>` : `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700">ปกติ</span>`);
+                    ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800">สั่งแล้ว (${item.orderedQty} ${escapeHtml(item.unit)})</span>` 
+                    : (isLow ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-100 text-rose-700">สต๊อกต่ำ</span>` : `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sage-100 text-sage-700">ปกติ</span>`);
 
                 return `
-                    <div class="bg-white p-3.5 rounded-2xl border border-slate-100 shadow-xs space-y-2">
+                    <div class="bg-[#FDFBF7] p-3.5 rounded-2xl border border-oak-200/60 card-shadow space-y-2 hover:border-oak-300 transition">
                         <div class="flex justify-between items-start">
                             <div>
-                                <span class="text-[10px] font-mono text-slate-400">${escapeHtml(item.code)}</span>
-                                <h4 class="font-bold text-slate-800 text-xs">${escapeHtml(item.name)}</h4>
+                                <span class="text-[10px] font-mono text-oak-400">${escapeHtml(item.code)}</span>
+                                <h4 class="font-semibold text-oak-900 text-xs">${escapeHtml(item.name)}</h4>
                             </div>
                             ${statusBadge}
                         </div>
-                        <div class="flex justify-between items-center bg-slate-50 p-2 rounded-xl text-xs">
+                        <div class="flex justify-between items-center bg-oak-50/60 p-2 rounded-xl text-xs">
                             <div>
-                                <p class="text-[10px] text-slate-400">คงเหลือ</p>
-                                <p class="font-bold ${isLow ? 'text-rose-600' : 'text-slate-700'}">${item.stock} ${escapeHtml(item.unit)}</p>
+                                <p class="text-[10px] text-oak-400">คงเหลือ</p>
+                                <p class="font-bold ${isLow ? 'text-rose-600' : 'text-oak-800'}">${item.stock} ${escapeHtml(item.unit)}</p>
                             </div>
                             <div class="flex gap-1.5">
-                                <button onclick="openQuickAdjustModalWithMode('ADD', ${item.id})" class="px-2.5 py-1.5 bg-emerald-600 text-white font-bold rounded-xl text-xs shadow-xs">+ เติม</button>
-                                <button onclick="openQuickAdjustModalWithMode('SUB', ${item.id})" class="px-2.5 py-1.5 bg-rose-500 text-white font-bold rounded-xl text-xs shadow-xs">- เบิก</button>
+                                <button onclick="openQuickAdjustModalWithMode('ADD', ${item.id})" class="px-2.5 py-1.5 bg-sage-600 text-white font-bold rounded-xl text-xs shadow-sm hover:bg-sage-700 btn-hover-effect">+ เติม</button>
+                                <button onclick="openQuickAdjustModalWithMode('SUB', ${item.id})" class="px-2.5 py-1.5 bg-rose-500 text-white font-bold rounded-xl text-xs shadow-sm hover:bg-rose-600 btn-hover-effect">- เบิก</button>
                             </div>
                         </div>
                     </div>
@@ -914,7 +965,7 @@
             if (!container) return;
 
             if (adjustLogs.length === 0) {
-                container.innerHTML = `<p class="text-xs text-slate-400 py-4 text-center">ยังไม่มีประวัติการปรับปรุงสต๊อก</p>`;
+                container.innerHTML = `<p class="text-xs text-oak-400 py-4 text-center font-light">ยังไม่มีประวัติการปรับปรุงสต๊อก</p>`;
                 return;
             }
 
@@ -923,13 +974,13 @@
             container.innerHTML = sortedLogs.map(log => {
                 const isAdd = log.type === 'ADD';
                 return `
-                    <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-100 flex justify-between items-center text-xs">
+                    <div class="p-2.5 bg-oak-50/60 rounded-xl border border-oak-200/50 flex justify-between items-center text-xs hover:bg-oak-100/50 transition">
                         <div>
-                            <p class="font-bold text-slate-800">${escapeHtml(log.itemName)}</p>
-                            <p class="text-[10px] text-slate-400">${log.timestamp || log.date} | ${escapeHtml(log.reason || '-')}</p>
+                            <p class="font-semibold text-oak-900">${escapeHtml(log.itemName)}</p>
+                            <p class="text-[10px] text-oak-400">${log.timestamp || log.date} | ${escapeHtml(log.reason || '-')}</p>
                         </div>
                         <div class="flex items-center gap-2">
-                            <span class="font-bold ${isAdd ? 'text-emerald-600' : 'text-rose-600'}">
+                            <span class="font-bold ${isAdd ? 'text-sage-600' : 'text-rose-600'}">
                                 ${isAdd ? '+' : '-'}${log.qty} ${escapeHtml(log.unit || '')}
                             </span>
                         </div>
