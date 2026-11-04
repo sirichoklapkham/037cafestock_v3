@@ -82,29 +82,12 @@
                     <i class="fa-solid fa-file-excel text-emerald-400"></i>
                     <span>โหลด Sheet</span>
                 </button>
-                
-                <select id="role-selector" onchange="handleRoleSelect(this.value)" class="bg-amber-500 text-slate-950 font-bold text-[11px] px-2.5 py-1 rounded-lg outline-none cursor-pointer">
-                    <option value="STAFF">พนักงาน</option>
-                    <option value="OWNER">เจ้าของร้าน</option>
-                </select>
             </div>
         </div>
     </header>
 
     <!-- Main Content Container -->
     <main class="max-w-md w-full mx-auto p-4 space-y-4 flex-1">
-
-        <!-- Low Stock Notice Banner -->
-        <div id="low-stock-banner" class="hidden bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3 flex items-center justify-between text-xs text-amber-800">
-            <div class="flex items-center space-x-2">
-                <i class="fa-solid fa-triangle-exclamation text-amber-500 text-base"></i>
-                <div>
-                    <p class="font-bold">สินค้าสต๊อกต่ำกว่ากำหนด!</p>
-                    <p id="low-stock-banner-text" class="text-[11px] text-slate-600">มี 0 รายการที่ต้องเติม</p>
-                </div>
-            </div>
-            <button onclick="sendLowStockToLine()" class="owner-col hidden px-3 py-1.5 bg-emerald-600 text-white font-semibold rounded-xl text-[11px]">LINE</button>
-        </div>
 
         <!-- 1. CALENDAR TAB -->
         <section id="tab-calendar" class="tab-content space-y-4">
@@ -298,13 +281,10 @@
     </div>
 
     <script>
-        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwyQvhSqe9TbtSL7eI1n_dAgyseSAtr-Sunxx7poe4Za-rEcU7d56cwYMGRCqkVH2Mqrg/exec';
+        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxuqMELaabJU0Ke4gG4MLs8uIOWQ9iTP6HCt7dpDWjZ10koFDef29Lk0NuGXar7syYOyQ/exec';
         let googleScriptUrl = DEFAULT_SCRIPT_URL;
 
-        const OWNER_PASSWORD = '037cafe';
-        let currentRole = 'STAFF';
         let activeTabId = 'calendar';
-        let selectedAdjustItemId = null;
         let selectedAdjustType = 'ADD';
 
         let categories = [{ id: 1, name: 'ทั่วไป' }];
@@ -321,7 +301,7 @@
             return String(str).toLowerCase().replace(/[\u0300-\u036f]/g, '').replace(/[่้๊๋็์ํ๎]/g, '').replace(/\s+/g, '');
         }
 
-        // แปลงรูปแบบวันที่ทั้งหมดเป็น DD/MM/YYYY มาตรฐานเดียวกัน 100%
+        // แปลงรูปแบบวันที่เป็น DD/MM/YYYY
         function parseToStandardDateStr(dateInput) {
             if (!dateInput) return '';
             
@@ -431,7 +411,6 @@
             return parseToStandardDateStr(d);
         }
 
-        // รวมข้อมูลข้ามเครื่องแบบ Smart Reconciliation ป้องกันข้อมูลซ้ำซ้อน
         function mergeArraysUnique(localArr, remoteArr) {
             const map = new Map();
             remoteArr.forEach(item => {
@@ -447,14 +426,12 @@
             return Array.from(map.values());
         }
 
-        // ยกเลิกการล็อคเพื่อให้อัปเดตข้อมูลได้ตลอดเวลา
         async function fetchDataFromGoogleSheet(showToastAlert = false) {
             if (!googleScriptUrl) return;
 
             try {
                 if (showToastAlert) showToast('กำลังซิงค์ข้อมูลเรียลไทม์...');
 
-                // Dynamic URL Cache Busting บังคับดึงข้อมูลสด
                 const fetchUrl = googleScriptUrl + (googleScriptUrl.includes('?') ? '&' : '?') + '_t=' + Date.now();
                 const res = await fetch(fetchUrl, { cache: 'no-store' });
                 const resData = await res.json();
@@ -520,14 +497,9 @@
 
         function startAutoSync() {
             if (autoSyncTimer) clearInterval(autoSyncTimer);
-            // Real-time Background Polling ทุก 3 วินาที
             autoSyncTimer = setInterval(() => {
                 fetchDataFromGoogleSheet(false);
             }, 3000);
-        }
-
-        function stopAutoSync() {
-            if (autoSyncTimer) { clearInterval(autoSyncTimer); autoSyncTimer = null; }
         }
 
         function loadLocalOrDefaultData() {
@@ -553,22 +525,12 @@
                     body: JSON.stringify({ action, ...payloadData })
                 });
 
-                // สั่งดึงข้อมูลสดกลับมาด่วนเพื่ออัปเดตทุกหน้าจอ
                 setTimeout(async () => {
                     await fetchDataFromGoogleSheet(false);
                 }, 800);
             } catch (err) { 
                 console.error(err); 
             }
-        }
-
-        function handleRoleSelect(role) { switchRole(role); }
-
-        function switchRole(role) {
-            currentRole = role;
-            document.getElementById('role-selector').value = role;
-            startAutoSync();
-            renderInventoryTable();
         }
 
         function switchTab(tabId) {
