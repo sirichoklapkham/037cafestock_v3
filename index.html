@@ -114,10 +114,11 @@
                 <div id="calendar-grid" class="grid grid-cols-7 gap-1.5 text-xs"></div>
             </div>
 
-            <div class="bg-emerald-50 border border-emerald-200/60 rounded-2xl p-3 flex items-center justify-between text-emerald-800 text-xs font-medium shadow-xs">
+            <!-- แถบแสดงสถานะการซิงค์ข้อมูลเรียลไทม์ -->
+            <div id="sync-status-card" class="bg-emerald-50 border border-emerald-200/60 rounded-2xl p-3 flex items-center justify-between text-emerald-800 text-xs font-medium shadow-xs transition-all duration-300">
                 <div class="flex items-center space-x-2">
-                    <i class="fa-regular fa-circle-check text-emerald-500 text-base"></i>
-                    <span id="calendar-status-chip">ยอดซื้อ-เติมสต๊อกประจำวันอัปเดตเรียบร้อย</span>
+                    <i id="sync-status-icon" class="fa-solid fa-circle-check text-emerald-500 text-base"></i>
+                    <span id="calendar-status-chip">ซิงค์ข้อมูลเรียลไทม์เรียบร้อย</span>
                 </div>
             </div>
 
@@ -281,7 +282,7 @@
     </div>
 
     <script>
-        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxuqMELaabJU0Ke4gG4MLs8uIOWQ9iTP6HCt7dpDWjZ10koFDef29Lk0NuGXar7syYOyQ/exec';
+        const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyB73LeuzLCKo2kzt7_H1sTjmcrwRYUiG692kPsVfbUVVF1-JrlgWuhl-p0Y-9OR_GCaQ/exec';
         let googleScriptUrl = DEFAULT_SCRIPT_URL;
 
         let activeTabId = 'calendar';
@@ -301,7 +302,6 @@
             return String(str).toLowerCase().replace(/[\u0300-\u036f]/g, '').replace(/[่้๊๋็์ํ๎]/g, '').replace(/\s+/g, '');
         }
 
-        // แปลงรูปแบบวันที่เป็น DD/MM/YYYY
         function parseToStandardDateStr(dateInput) {
             if (!dateInput) return '';
             
@@ -426,10 +426,30 @@
             return Array.from(map.values());
         }
 
+        // ระบบเปลี่ยนสถานะชิปแจ้งเตือนการซิงค์ข้อมูล
+        function setSyncStatusUI(isSyncing, message = '') {
+            const chipText = document.getElementById('calendar-status-chip');
+            const chipIcon = document.getElementById('sync-status-icon');
+            const syncCard = document.getElementById('sync-status-card');
+
+            if (!chipText || !chipIcon || !syncCard) return;
+
+            if (isSyncing) {
+                chipText.innerText = message || 'กำลังซิงค์ข้อมูลเรียลไทม์...';
+                chipIcon.className = 'fa-solid fa-arrows-rotate fa-spin text-amber-500 text-base';
+                syncCard.className = 'bg-amber-50 border border-amber-200/60 rounded-2xl p-3 flex items-center justify-between text-amber-800 text-xs font-medium shadow-xs transition-all duration-300';
+            } else {
+                chipText.innerText = message || 'ซิงค์ข้อมูลเรียลไทม์เรียบร้อย';
+                chipIcon.className = 'fa-solid fa-circle-check text-emerald-500 text-base';
+                syncCard.className = 'bg-emerald-50 border border-emerald-200/60 rounded-2xl p-3 flex items-center justify-between text-emerald-800 text-xs font-medium shadow-xs transition-all duration-300';
+            }
+        }
+
         async function fetchDataFromGoogleSheet(showToastAlert = false) {
             if (!googleScriptUrl) return;
 
             try {
+                setSyncStatusUI(true, 'กำลังซิงค์ข้อมูลเรียลไทม์...');
                 if (showToastAlert) showToast('กำลังซิงค์ข้อมูลเรียลไทม์...');
 
                 const fetchUrl = googleScriptUrl + (googleScriptUrl.includes('?') ? '&' : '?') + '_t=' + Date.now();
@@ -486,9 +506,11 @@
                 }
                 
                 saveToLocalStorage();
+                setSyncStatusUI(false, 'ซิงค์ข้อมูลเรียลไทม์เรียบร้อย');
                 if (showToastAlert) showToast('ซิงค์ข้อมูลเรียบร้อยแล้ว');
             } catch (err) {
                 console.error('Fetch error:', err);
+                setSyncStatusUI(false, 'การเชื่อมต่อขัดข้อง');
                 if (showToastAlert) showToast('การเชื่อมต่อขัดข้อง');
             }
 
@@ -519,6 +541,7 @@
         async function syncItemToGoogleSheet(action, payloadData) {
             if (!googleScriptUrl) return;
             try {
+                setSyncStatusUI(true, 'กำลังบันทึกลง Sheet...');
                 await fetch(googleScriptUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -530,6 +553,7 @@
                 }, 800);
             } catch (err) { 
                 console.error(err); 
+                setSyncStatusUI(false, 'บันทึกล้มเหลว');
             }
         }
 
